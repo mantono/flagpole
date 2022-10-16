@@ -1,40 +1,47 @@
 use std::{
     collections::HashMap,
     convert::Infallible,
+    hash::Hash,
     sync::{Arc, RwLock},
 };
 
-use http::Response;
-use serde_json::json;
-use warp::{reply::Json, Filter};
+use actix_web::{
+    delete,
+    dev::Response,
+    get, head, put,
+    web::{self, Data, Path},
+    HttpRequest, HttpResponse, Responder, Result,
+};
 
 use crate::{Database, Flag, FlagConf};
 
-type DbHandle = Arc<RwLock<Database>>;
+type DbHandle = Data<RwLock<Database>>;
 
-pub fn routes(
-    db: DbHandle,
-) -> impl Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone {
-    let get_flag = warp::get()
-        .and(warp::path!("flags" / Flag))
-        .and(with_db(db))
-        .map(|flag: Flag, db: DbHandle| db.read().unwrap().get(&flag).unwrap_or_default())
-        .map(|rate: f64| {
-            let json = json!({ "rate": rate });
-            warp::reply::json(&json)
-        });
-    let get_all_flags = warp::get().and(warp::path("flags")).map(|| Ok("foo"));
-    let head_flags = warp::head().and(warp::path("flags")).map(|| "foo");
-
-    let put_flag = warp::put()
-        .and(warp::path!("flags" / Flag))
-        .and(warp::body::json())
-        .map(|p: Flag, b: FlagConf| format!("P: {}, B: {:?} ", p, b));
-
-    let all = get_flag.or(get_all_flags).or(head_flags).or(put_flag);
-    all
+#[get("/flags/{flag}")]
+pub async fn get_flag(req: HttpRequest, db: DbHandle) -> Result<impl Responder> {
+    let flag: Flag = req.match_info().get("flag").unwrap().parse().unwrap();
+    let rate: f64 = db.read().unwrap().get(&flag).unwrap_or_default();
+    Ok(web::Json(serde_json::json!({ "rate": rate })))
 }
 
-fn with_db(db: DbHandle) -> impl Filter<Extract = (DbHandle,), Error = Infallible> + Clone {
-    warp::any().map(move || db.clone())
+#[put("/flags/{flag}")]
+pub async fn put_flag(req: HttpRequest, db: DbHandle) -> impl Responder {
+    HttpResponse::Ok()
+}
+
+#[delete("/flags/{flag}")]
+pub async fn delete_flag(req: HttpRequest, db: DbHandle) -> impl Responder {
+    HttpResponse::Ok()
+}
+
+#[head("/flags")]
+pub async fn head_flags(req: HttpRequest, db: DbHandle) -> impl Responder {
+    HttpResponse::Ok()
+}
+
+#[get("/flags")]
+pub async fn get_flags(req: HttpRequest, db: DbHandle) -> impl Responder {
+    let flags: HashMap<String, f64> = db.read().unwrap().get_all();
+    let json: String = serde_json::to_string(&flags).unwrap();
+    HttpResponse::Ok().body(json)
 }

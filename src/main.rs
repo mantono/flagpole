@@ -7,16 +7,26 @@ use std::{
     sync::{Arc, Mutex, RwLock},
 };
 
-use http::Response;
+use actix_web::{web, App, HttpServer};
 use lazy_static::lazy_static;
 use regex::{Regex, RegexBuilder};
-use warp::Filter;
 
 #[tokio::main]
-async fn main() {
-    let db = Arc::new(RwLock::new(Database::new()));
-    let api = api::routes(db);
-    warp::serve(api).run(([127, 0, 0, 1], 8080)).await;
+async fn main() -> std::io::Result<()> {
+    let db = web::Data::new(RwLock::new(Database::new()));
+
+    HttpServer::new(move || {
+        App::new()
+            .service(api::get_flags)
+            .service(api::head_flags)
+            .service(api::get_flag)
+            .service(api::put_flag)
+            .service(api::delete_flag)
+            .app_data(db.clone())
+    })
+    .bind("127.0.0.1:8080")?
+    .run()
+    .await
 }
 
 #[derive(serde::Deserialize, Debug)]

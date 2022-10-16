@@ -2,21 +2,44 @@ mod api;
 
 use std::{
     collections::HashMap,
+    convert::Infallible,
+    error::Error,
     fmt::Display,
+    net::SocketAddr,
     str::FromStr,
     sync::{Arc, Mutex, RwLock},
 };
 
 use http::Response;
+use hyper::{Body, Server};
 use lazy_static::lazy_static;
 use regex::{Regex, RegexBuilder};
-use warp::Filter;
+use routerify::{Router, RouterService};
 
 #[tokio::main]
 async fn main() {
+    let router = router();
+    let service = RouterService::new(router).unwrap();
+    let addr = SocketAddr::from(([127, 0, 0, 1], 8080));
+    let server = Server::bind(&addr).serve(service);
+
+    println!("App is running on: {}", addr);
+    if let Err(err) = server.await {
+        eprintln!("Server error: {}", err);
+    }
+}
+
+fn router() -> Router<Body, Infallible> {
     let db = Arc::new(RwLock::new(Database::new()));
-    let api = api::routes(db);
-    warp::serve(api).run(([127, 0, 0, 1], 8080)).await;
+    Router::builder()
+        .data(db)
+        .head("/flags", api::head_flags)
+        .get("/flags", api::get_flags)
+        .put("/flags/:flag", api::put_flag)
+        .get("/flags/:flag", api::get_flag)
+        .delete("/flags/:flag", api::delete_flag)
+        .build()
+        .unwrap()
 }
 
 #[derive(serde::Deserialize, Debug)]

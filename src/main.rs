@@ -10,36 +10,37 @@ use std::{
     sync::{Arc, Mutex, RwLock},
 };
 
-use http::Response;
-use hyper::{Body, Server};
+use axum::{
+    routing::{get, head},
+    Extension, Router,
+};
 use lazy_static::lazy_static;
 use regex::{Regex, RegexBuilder};
-use routerify::{Router, RouterService};
 
 #[tokio::main]
 async fn main() {
     let router = router();
-    let service = RouterService::new(router).unwrap();
     let addr = SocketAddr::from(([127, 0, 0, 1], 8080));
-    let server = Server::bind(&addr).serve(service);
-
-    println!("App is running on: {}", addr);
-    if let Err(err) = server.await {
-        eprintln!("Server error: {}", err);
-    }
+    axum::Server::bind(&addr).serve(router.into_make_service()).await.unwrap();
 }
 
-fn router() -> Router<Body, Infallible> {
+fn router() -> Router {
     let db = Arc::new(RwLock::new(Database::new()));
-    Router::builder()
-        .data(db)
-        .head("/flags", api::head_flags)
-        .get("/flags", api::get_flags)
-        .put("/flags/:flag", api::put_flag)
-        .get("/flags/:flag", api::get_flag)
-        .delete("/flags/:flag", api::delete_flag)
-        .build()
-        .unwrap()
+
+    Router::new()
+        .route("/flags", head(api::head_flags).get(api::get_flags))
+        .route("/flags/:flag", get(api::get_flag).put(api::put_flag).delete(api::delete_flag))
+        .layer(Extension(db))
+
+    /*     Router::builder()
+    .data(db)
+    .head("/flags", api::head_flags)
+    .get("/flags", api::get_flags)
+    .put("/flags/:flag", api::put_flag)
+    .get("/flags/:flag", api::get_flag)
+    .delete("/flags/:flag", api::delete_flag)
+    .build()
+    .unwrap() */
 }
 
 #[derive(serde::Deserialize, Debug)]

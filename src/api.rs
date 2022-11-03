@@ -5,44 +5,37 @@ use std::{
     sync::{Arc, RwLock},
 };
 
-use axum::{
-    extract::Path,
-    http::{Request, Response, StatusCode},
-    response::IntoResponse,
-    Extension, Json,
-};
 use serde_json::{json, Value};
 
-use crate::{Database, Flag, FlagConf};
+use crate::flag::Flag;
+use crate::flag::FlagConf;
+use crate::Database;
 
 type DbHandle = Arc<RwLock<Database>>;
 
-pub async fn head_flags(Extension(db): Extension<DbHandle>) -> () {
+pub async fn head_flags(db: DbHandle) -> () {
     ()
 }
 
-pub async fn get_flags(Extension(db): Extension<DbHandle>) -> Json<HashMap<String, f64>> {
-    Json(db.read().unwrap().get_all())
+pub async fn get_flags(env: String, namespace: String, db: DbHandle) -> HashMap<Flag, FlagConf> {
+    db.read()
+        .unwrap()
+        .data
+        .clone()
+        .into_iter()
+        .filter(|(key, _)| key.namespace() == namespace)
+        .collect()
 }
-
-pub async fn get_flag(Path(flag): Path<String>, Extension(db): Extension<DbHandle>) -> Json<Value> {
-    let flag: Flag = flag.parse().unwrap();
-    let rate: f64 = db.read().unwrap().get(&flag).unwrap_or_default();
-    Json(json!({ "rate": 0 }))
-}
-
+/*
 pub async fn put_flag(
-    req: Request<FlagConf>,
-    Path(flag): Path<String>,
-    Extension(db): Extension<DbHandle>,
+    flag: Flag,
+    conf: FlagConf,
+    db: DbHandle,
 ) -> Result<Response<()>, Infallible> {
-    let body: &FlagConf = req.body();
-    let flag: Flag = flag.parse().unwrap();
-    db.write().unwrap().set(flag, body.rate);
+    db.write().unwrap().set(flag, conf);
     Ok(Response::default())
 }
 
-pub async fn delete_flag(Path(flag): Path<String>) -> impl IntoResponse {
-    let flag: Flag = flag.parse().unwrap();
+pub async fn delete_flag(flag: Flag, db: DbHandle) -> impl IntoResponse {
     StatusCode::OK
-}
+} */

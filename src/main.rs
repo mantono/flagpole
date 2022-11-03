@@ -8,49 +8,44 @@ use std::{
 
 use flag::{Flag, FlagConf};
 use http::request;
+use warp::Filter;
 
-fn main() {
-    rouille::start_server("0.0.0.0:8080", move |request| rouille::Response::text("foo"))
-}
+type DbHandle = Arc<RwLock<gistdb::GistDb>>;
 
-/* Router::new()
-.route("/flags/:namespace", head(api::head_flags).get(api::get_flags))
-.route("/flags/:namespace/:flag", put(api::put_flag).delete(api::delete_flag))
-.layer(Extension(db)) */
+#[tokio::main]
+async fn main() {
+    let token = std::env::var("GITHUB_TOKEN").expect("GITHUB_TOKEN");
+    let gist_id = std::env::var("GIST_ID").expect("GIST_ID");
+    let database = gistdb::GistDb::new(token, gist_id).await;
+    let database: Arc<RwLock<gistdb::GistDb>> = Arc::new(RwLock::new(database));
+    let db = warp::any().map(move || database.clone());
+    let base = warp::path!("api" / "v1" / "flags" / String);
+    let head_flags = base
+        .and(warp::head())
+        .and(db.clone())
+        .map(|namespace, db| format!("HEAD flags for namespace {}", namespace));
 
-/*     Router::builder()
-.data(db)
-.head("/flags", api::head_flags)
-.get("/flags", api::get_flags)
-.put("/flags/:flag", api::put_flag)
-.get("/flags/:flag", api::get_flag)
-.delete("/flags/:flag", api::delete_flag)
-.build()
-.unwrap() */
+    let get_flags = base.and(warp::get()).and(db.clone()).map(|namespace: String, db: DbHandle| {
+        format!(
+            "GET flags for namespace {}: {:?}",
+            namespace,
+            db.try_read().unwrap().get_value(&namespace)
+        )
+    });
 
-pub struct Database {
-    data: HashMap<Flag, FlagConf>,
-}
+    let put_flag = base
+        .and(warp::path!(String))
+        .and(warp::put())
+        .and(db.clone())
+        .map(|namespace, flag, db| format!("PUT flag {} for namespace {}", flag, namespace));
 
-impl Database {
-    pub fn new() -> Database {
-        Self {
-            data: HashMap::with_capacity(8),
-        }
-    }
-    pub fn get_all(&self) -> HashMap<String, FlagConf> {
-        self.data.iter().map(|(k, v)| (k.to_string(), v.clone())).collect()
-    }
+    let delete_flag = base
+        .and(warp::path!(String))
+        .and(warp::delete())
+        .and(db.clone())
+        .map(|namespace, flag, db| format!("DELETE flag {} for namespace {}", flag, namespace));
 
-    pub fn get(&self, flag: &Flag) -> Option<FlagConf> {
-        self.data.get(flag).cloned()
-    }
+    let routes = head_flags.or(get_flags).or(put_flag).or(delete_flag);
 
-    pub fn set(&mut self, flag: Flag, conf: FlagConf) {
-        self.data.insert(flag, conf);
-    }
-
-    pub fn delete(&mut self, flag: &Flag) {
-        self.data.remove(flag);
-    }
+    warp::serve(routes).run(([127, 0, 0, 1], 8080)).await
 }

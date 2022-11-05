@@ -29,7 +29,7 @@ async fn main() {
     let flag = warp::path!("api" / "v1" / "flags" / String / String);
     let head_flags = flags.and(warp::head()).and(db.clone()).map(api::head_flags);
     let get_flags = flags.and(warp::get()).and(db.clone()).map(api::get_flags);
-    let put_flag = flag.and(warp::put()).and(db.clone()).map(api::put_flag);
+    let put_flag = flag.and(warp::put()).and(warp::body::json()).and(db.clone()).map(api::put_flag);
     let delete_flag = flag.and(warp::delete()).and(db.clone()).map(api::delete_flag);
 
     let routes = put_flag.or(delete_flag).or(head_flags).or(get_flags);

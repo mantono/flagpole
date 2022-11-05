@@ -16,12 +16,10 @@ pub fn get_flags(namespace: String, db: DbHandle) -> String {
     )
 }
 
-pub fn put_flag(namespace: String, flag: String, db: DbHandle) -> String {
-    let msg: String = format!("PUT flag {} for namespace {}", flag, namespace);
+pub fn put_flag(namespace: String, flag: String, conf: FlagConf, db: DbHandle) -> String {
     let flag = Flag::new(namespace, flag).unwrap();
-    let conf = FlagConf { rate: 1.0 };
     db.write().unwrap().set_value(flag, conf).unwrap();
-    msg
+    String::from("Wrote flag")
 }
 
 pub fn delete_flag(namespace: String, flag: String, db: DbHandle) -> String {

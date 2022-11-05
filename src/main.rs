@@ -1,23 +1,28 @@
 mod api;
+mod db;
 mod flag;
 
 use std::{
     collections::HashMap,
+    convert::Infallible,
     sync::{Arc, RwLock},
 };
 
+use db::{Database, InMemoryDb};
 use flag::{Flag, FlagConf};
 use http::request;
 use warp::Filter;
 
-type DbHandle = Arc<RwLock<gistdb::GistDb>>;
+type DbHandle = Arc<RwLock<InMemoryDb>>;
+
+async fn create_db() -> DbHandle {
+    let database = InMemoryDb::new();
+    Arc::new(RwLock::new(database))
+}
 
 #[tokio::main]
 async fn main() {
-    let token = std::env::var("GITHUB_TOKEN").expect("GITHUB_TOKEN");
-    let gist_id = std::env::var("GIST_ID").expect("GIST_ID");
-    let database = gistdb::GistDb::new(token, gist_id).await;
-    let database: Arc<RwLock<gistdb::GistDb>> = Arc::new(RwLock::new(database));
+    let database: DbHandle = create_db().await;
     let db = warp::any().map(move || database.clone());
     let base = warp::path!("api" / "v1" / "flags" / String);
     let head_flags = base
@@ -28,8 +33,8 @@ async fn main() {
     let get_flags = base.and(warp::get()).and(db.clone()).map(|namespace: String, db: DbHandle| {
         format!(
             "GET flags for namespace {}: {:?}",
-            namespace,
-            db.try_read().unwrap().get_value(&namespace)
+            &namespace,
+            db.try_read().unwrap().get_values(&namespace)
         )
     });
 

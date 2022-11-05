@@ -38,6 +38,7 @@ impl Flag {
     }
 }
 
+#[derive(Debug, Clone)]
 pub enum FlagError {
     Length(FlagField, usize),
     InvalidByte(FlagField, u8),

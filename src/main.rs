@@ -24,33 +24,15 @@ async fn create_db() -> DbHandle {
 async fn main() {
     let database: DbHandle = create_db().await;
     let db = warp::any().map(move || database.clone());
-    let base = warp::path!("api" / "v1" / "flags" / String);
-    let head_flags = base
-        .and(warp::head())
-        .and(db.clone())
-        .map(|namespace, db| format!("HEAD flags for namespace {}", namespace));
 
-    let get_flags = base.and(warp::get()).and(db.clone()).map(|namespace: String, db: DbHandle| {
-        format!(
-            "GET flags for namespace {}: {:?}",
-            &namespace,
-            db.try_read().unwrap().get_values(&namespace)
-        )
-    });
+    let flags = warp::path!("api" / "v1" / "flags" / String);
+    let flag = warp::path!("api" / "v1" / "flags" / String / String);
+    let head_flags = flags.and(warp::head()).and(db.clone()).map(api::head_flags);
+    let get_flags = flags.and(warp::get()).and(db.clone()).map(api::get_flags);
+    let put_flag = flag.and(warp::put()).and(db.clone()).map(api::put_flag);
+    let delete_flag = flag.and(warp::delete()).and(db.clone()).map(api::delete_flag);
 
-    let put_flag = base
-        .and(warp::path!(String))
-        .and(warp::put())
-        .and(db.clone())
-        .map(|namespace, flag, db| format!("PUT flag {} for namespace {}", flag, namespace));
-
-    let delete_flag = base
-        .and(warp::path!(String))
-        .and(warp::delete())
-        .and(db.clone())
-        .map(|namespace, flag, db| format!("DELETE flag {} for namespace {}", flag, namespace));
-
-    let routes = head_flags.or(get_flags).or(put_flag).or(delete_flag);
+    let routes = put_flag.or(delete_flag).or(head_flags).or(get_flags);
 
     warp::serve(routes).run(([127, 0, 0, 1], 8080)).await
 }

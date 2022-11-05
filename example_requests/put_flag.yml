@@ -1,0 +1,10 @@
+# Set a flag for namespace
+method: PUT
+url: http://{{API_URL}}/api/v1/flags/{{NAMESPACE}}/{{FLAG}}
+headers:
+  accept: application/json
+  content-type: application/json
+body: |
+  {
+    "rate": 1.0
+  }

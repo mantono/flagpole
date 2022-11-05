@@ -1,40 +1,27 @@
-use std::{
-    collections::HashMap,
-    convert::Infallible,
-    sync::{Arc, RwLock},
+use crate::{
+    db::Database,
+    flag::{Flag, FlagConf},
+    DbHandle,
 };
 
-use http::Response;
-use serde_json::json;
-use warp::{reply::Json, Filter};
-
-use crate::{Database, Flag, FlagConf};
-
-type DbHandle = Arc<RwLock<Database>>;
-
-pub fn routes(
-    db: DbHandle,
-) -> impl Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone {
-    let get_flag = warp::get()
-        .and(warp::path!("flags" / Flag))
-        .and(with_db(db))
-        .map(|flag: Flag, db: DbHandle| db.read().unwrap().get(&flag).unwrap_or_default())
-        .map(|rate: f64| {
-            let json = json!({ "rate": rate });
-            warp::reply::json(&json)
-        });
-    let get_all_flags = warp::get().and(warp::path("flags")).map(|| Ok("foo"));
-    let head_flags = warp::head().and(warp::path("flags")).map(|| "foo");
-
-    let put_flag = warp::put()
-        .and(warp::path!("flags" / Flag))
-        .and(warp::body::json())
-        .map(|p: Flag, b: FlagConf| format!("P: {}, B: {:?} ", p, b));
-
-    let all = get_flag.or(get_all_flags).or(head_flags).or(put_flag);
-    all
+pub fn head_flags(namespace: String, db: DbHandle) -> String {
+    format!("HEAD flags for namespace {}", namespace)
 }
 
-fn with_db(db: DbHandle) -> impl Filter<Extract = (DbHandle,), Error = Infallible> + Clone {
-    warp::any().map(move || db.clone())
+pub fn get_flags(namespace: String, db: DbHandle) -> String {
+    format!(
+        "GET flags for namespace {}: {:?}",
+        &namespace,
+        db.try_read().unwrap().get_values(&namespace)
+    )
+}
+
+pub fn put_flag(namespace: String, flag: String, conf: FlagConf, db: DbHandle) -> String {
+    let flag = Flag::new(namespace, flag).unwrap();
+    db.write().unwrap().set_value(flag, conf).unwrap();
+    String::from("Wrote flag")
+}
+
+pub fn delete_flag(namespace: String, flag: String, db: DbHandle) -> String {
+    format!("DELETE flag {} for namespace {}", flag, namespace)
 }

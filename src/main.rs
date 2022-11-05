@@ -1,97 +1,32 @@
 mod api;
+mod db;
+mod flag;
 
-use std::{
-    collections::HashMap,
-    fmt::Display,
-    str::FromStr,
-    sync::{Arc, Mutex, RwLock},
-};
+use std::sync::{Arc, RwLock};
 
-use http::Response;
-use lazy_static::lazy_static;
-use regex::{Regex, RegexBuilder};
+use db::InMemoryDb;
 use warp::Filter;
+
+type DbHandle = Arc<RwLock<InMemoryDb>>;
+
+async fn create_db() -> DbHandle {
+    let database = InMemoryDb::new();
+    Arc::new(RwLock::new(database))
+}
 
 #[tokio::main]
 async fn main() {
-    let db = Arc::new(RwLock::new(Database::new()));
-    let api = api::routes(db);
-    warp::serve(api).run(([127, 0, 0, 1], 8080)).await;
+    let database: DbHandle = create_db().await;
+    let db = warp::any().map(move || database.clone());
+
+    let flags = warp::path!("api" / "v1" / "flags" / String);
+    let flag = warp::path!("api" / "v1" / "flags" / String / String);
+    let head_flags = flags.and(warp::head()).and(db.clone()).map(api::head_flags);
+    let get_flags = flags.and(warp::get()).and(db.clone()).map(api::get_flags);
+    let put_flag = flag.and(warp::put()).and(warp::body::json()).and(db.clone()).map(api::put_flag);
+    let delete_flag = flag.and(warp::delete()).and(db.clone()).map(api::delete_flag);
+
+    let routes = put_flag.or(delete_flag).or(head_flags).or(get_flags);
+
+    warp::serve(routes).run(([127, 0, 0, 1], 8080)).await
 }
-
-#[derive(serde::Deserialize, Debug)]
-pub struct FlagConf {
-    pub rate: f64,
-}
-
-pub struct Database {
-    data: HashMap<Flag, f64>,
-}
-
-impl Database {
-    pub fn new() -> Database {
-        Self {
-            data: HashMap::with_capacity(8),
-        }
-    }
-    pub fn get_all(&self) -> HashMap<String, f64> {
-        self.data.iter().map(|(k, v)| (k.to_string(), *v)).collect()
-    }
-
-    pub fn get(&self, flag: &Flag) -> Option<f64> {
-        self.data.get(flag).cloned()
-    }
-
-    pub fn set(&mut self, flag: Flag, rate: f64) {
-        self.data.insert(flag, rate);
-    }
-
-    pub fn delete(&mut self, flag: &Flag) {
-        self.data.remove(flag);
-    }
-}
-
-#[derive(Hash, PartialEq, Eq, Clone)]
-pub struct Flag(String);
-
-impl Display for Flag {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str(&self.0)
-    }
-}
-
-const FLAG_KEY_REGEX: &'static str = r"^[a-zA-Z0-9_\.\-]{1,128}$";
-
-lazy_static! {
-    static ref REGEX: Regex = RegexBuilder::new(FLAG_KEY_REGEX)
-        .size_limit(65_536)
-        .build()
-        .expect("Compile regex");
-}
-
-impl FromStr for Flag {
-    type Err = ();
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match REGEX.is_match(s) {
-            true => Ok(Flag(s.to_string())),
-            false => Err(()),
-        }
-    }
-}
-
-/* fn accept(c: u8) -> bool {
-    match c {
-        // - OR .
-        45 | 46 => true,
-        // 0 - 9
-        48..=57 => true,
-        // A - Z
-        65..=90 => true,
-        // _
-        95 => true,
-        97..=122 => true,
-        _ => false,
-    }
-}
- */

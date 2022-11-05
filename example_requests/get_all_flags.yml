@@ -1,0 +1,5 @@
+# Get all flags for a given namespace
+method: GET
+url: http://{{API_URL}}/api/v1/flags/{{NAMESPACE}}
+headers:
+  accept: application/json

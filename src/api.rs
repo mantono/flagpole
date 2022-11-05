@@ -1,5 +1,5 @@
 use crate::{
-    db::{self, Database},
+    db::Database,
     flag::{Flag, FlagConf},
     DbHandle,
 };

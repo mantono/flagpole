@@ -2,15 +2,9 @@ mod api;
 mod db;
 mod flag;
 
-use std::{
-    collections::HashMap,
-    convert::Infallible,
-    sync::{Arc, RwLock},
-};
+use std::sync::{Arc, RwLock};
 
-use db::{Database, InMemoryDb};
-use flag::{Flag, FlagConf};
-use http::request;
+use db::InMemoryDb;
 use warp::Filter;
 
 type DbHandle = Arc<RwLock<InMemoryDb>>;

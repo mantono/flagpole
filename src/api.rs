@@ -23,5 +23,7 @@ pub fn put_flag(namespace: String, flag: String, conf: FlagConf, db: DbHandle) -
 }
 
 pub fn delete_flag(namespace: String, flag: String, db: DbHandle) -> String {
-    format!("DELETE flag {} for namespace {}", flag, namespace)
+    let flag = Flag::new(namespace, flag).unwrap();
+    db.write().unwrap().delete_flag(flag).unwrap();
+    String::from("Deleted flag")
 }

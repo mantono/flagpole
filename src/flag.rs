@@ -154,7 +154,7 @@ impl Display for UnreservedString {
     }
 }
 
-#[derive(serde::Deserialize, Debug, Clone)]
+#[derive(serde::Deserialize, serde::Serialize, Debug, Clone)]
 pub struct FlagConf {
     pub rate: f64,
 }

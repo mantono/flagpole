@@ -1,4 +1,9 @@
-use std::{collections::HashMap, convert::Infallible};
+use std::{
+    collections::{hash_map::DefaultHasher, HashMap},
+    convert::Infallible,
+    hash::Hasher,
+    time::{SystemTime, UNIX_EPOCH},
+};
 
 use crate::flag::{Flag, FlagConf};
 
@@ -7,11 +12,12 @@ pub trait Database {
 
     fn set_value(&mut self, key: Flag, conf: FlagConf) -> Result<(), Self::Error>;
     fn get_values(&self, namespace: &str) -> Result<HashMap<Flag, FlagConf>, Self::Error>;
+    fn etag(&self, namespace: &str) -> Result<String, Self::Error>;
     fn delete_flag(&mut self, key: Flag) -> Result<(), Self::Error>;
 }
 
 pub struct InMemoryDb {
-    data: HashMap<String, HashMap<Flag, FlagConf>>,
+    data: HashMap<Flag, FlagConf>,
 }
 
 impl InMemoryDb {
@@ -26,19 +32,27 @@ impl Database for InMemoryDb {
     type Error = Infallible;
 
     fn set_value(&mut self, key: Flag, conf: FlagConf) -> Result<(), Self::Error> {
-        let mut data: HashMap<Flag, FlagConf> = self.get_values(key.namespace())?;
-        let namespace: String = key.namespace().to_string();
-        data.insert(key, conf);
-        self.data.insert(namespace, data);
+        self.data.insert(key, conf);
         Ok(())
     }
 
     fn get_values(&self, namespace: &str) -> Result<HashMap<Flag, FlagConf>, Self::Error> {
-        Ok(self.data.get(namespace).map(|data| data.clone()).unwrap_or_default())
+        let data: HashMap<Flag, FlagConf> = self
+            .data
+            .iter()
+            .filter(|(k, _)| k.namespace() == namespace)
+            .map(|(k, v)| (k.clone(), v.clone()))
+            .collect();
+
+        Ok(data)
     }
 
     fn delete_flag(&mut self, key: Flag) -> Result<(), Self::Error> {
-        self.data.get_mut(key.namespace()).and_then(|v| v.remove(&key));
+        self.data.remove(&key);
         Ok(())
+    }
+
+    fn etag(&self, namespace: &str) -> Result<String, Self::Error> {
+        Ok(todo!())
     }
 }

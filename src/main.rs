@@ -1,6 +1,7 @@
 mod api;
 mod db;
 mod flag;
+mod unstr;
 
 use std::sync::{Arc, RwLock};
 

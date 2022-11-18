@@ -34,16 +34,7 @@ impl UnreservedString {
 
     #[inline]
     const fn check(byte: u8) -> bool {
-        match byte {
-            b'a'..=b'z' => true,
-            b'A'..=b'Z' => true,
-            b'0'..=b'9' => true,
-            b'-' => true,
-            b'.' => true,
-            b'_' => true,
-            b'~' => true,
-            _ => false,
-        }
+        matches!(byte, b'a'..=b'z' | b'A'..=b'Z' | b'0'..=b'9' | b'-' | b'.' | b'_' | b'~')
     }
 
     /// Returns the length of this string. Since the content of this string is only ASCII

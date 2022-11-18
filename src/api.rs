@@ -1,23 +1,26 @@
-use http::StatusCode;
-use warp::{hyper::Body, reply::Response};
-
 use crate::{
     db::Database,
     flag::{Flag, FlagConf},
     DbHandle,
 };
 
-pub fn head_flags(namespace: String, db: DbHandle) -> http::StatusCode {
-    http::StatusCode::OK
+pub fn head_flags(namespace: String, db: DbHandle) -> http::Response<String> {
+    let etag: u64 = db.read().unwrap().etag(&namespace).unwrap();
+    http::Response::builder()
+        .header("etag", etag)
+        .status(http::StatusCode::OK)
+        .body(String::from(""))
+        .unwrap()
 }
 
 pub fn get_flags(namespace: String, db: DbHandle) -> http::Response<String> {
-    let values = db.try_read().unwrap().get_values(&namespace).unwrap();
-    //warp::reply::json(&values)
+    let dbx = db.try_read().unwrap();
+    let values = dbx.get_values(&namespace).unwrap();
     let json: String = serde_json::to_string(&values).unwrap();
+    let etag: u64 = dbx.etag(&namespace).unwrap();
     http::Response::builder()
         .status(http::StatusCode::OK)
-        .header("ETag", "")
+        .header("ETag", etag)
         .body(json)
         .unwrap()
 }

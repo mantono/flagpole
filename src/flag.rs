@@ -1,5 +1,5 @@
 use serde::Serialize;
-use std::{collections::HashMap, fmt::Display, str::FromStr, time::SystemTime};
+use std::{fmt::Display, hash::Hash, str::FromStr};
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone)]
 pub struct Flag {
@@ -157,4 +157,10 @@ impl Display for UnreservedString {
 #[derive(serde::Deserialize, serde::Serialize, Debug, Clone)]
 pub struct FlagConf {
     pub rate: f64,
+}
+
+impl Hash for FlagConf {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        state.write(&self.rate.to_be_bytes());
+    }
 }

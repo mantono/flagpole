@@ -1,7 +1,7 @@
 # API
 
-## GET `/flags`
-## HEAD `/flags`
-## GET `/flags/{flag}`
-## PUT `/flags/{flag}`
-## DELETE `/flags/{flag}`
+## GET `/flags/{namespace}`
+## HEAD `/flags/{namespace}`
+## PUT `/flags/{namespace}`
+## PATCH `/flags/{namespace}`
+## DELETE `/flags/{namespace}/{flag}`

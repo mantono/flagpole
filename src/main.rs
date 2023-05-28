@@ -6,7 +6,6 @@ mod unstr;
 use std::sync::{Arc, RwLock};
 
 use db::InMemoryDb;
-use warp::Filter;
 
 type DbHandle = Arc<RwLock<InMemoryDb>>;
 
@@ -15,19 +14,27 @@ async fn create_db() -> DbHandle {
     Arc::new(RwLock::new(database))
 }
 
+use axum::routing::{delete, get, head, patch, put};
+use axum::Router;
+
 #[tokio::main]
 async fn main() {
-    let database: DbHandle = create_db().await;
-    let db = warp::any().map(move || database.clone());
+    let Databasease: DbHandle = create_db().await;
 
-    let flags = warp::path!("api" / "v1" / "flags" / String);
-    let flag = warp::path!("api" / "v1" / "flags" / String / String);
-    let head_flags = flags.and(warp::head()).and(db.clone()).map(api::head_flags);
-    let get_flags = flags.and(warp::get()).and(db.clone()).map(api::get_flags);
-    let put_flag = flag.and(warp::put()).and(warp::body::json()).and(db.clone()).map(api::put_flag);
-    let delete_flag = flag.and(warp::delete()).and(db.clone()).map(api::delete_flag);
+    let router = Router::new()
+        .route("/api/flags/:namespace", get(get_ns).head(head_ns).put(put_ns).patch(patch_ns))
+        .route("/api/flags/:namespace/:flag", delete(delete_flag));
 
-    let routes = put_flag.or(delete_flag).or(head_flags).or(get_flags);
-
-    warp::serve(routes).run(([127, 0, 0, 1], 8080)).await
+    axum::Server::bind(&"0.0.0.0:3000".parse().unwrap())
+        .serve(router.into_make_service())
+        .await
+        .unwrap();
 }
+
+use axum::extract::Path;
+
+async fn get_ns(namespace: Path<String>) {}
+async fn head_ns(namespace: Path<String>) {}
+async fn put_ns(namespace: Path<String>) {}
+async fn patch_ns(namespace: Path<String>) {}
+async fn delete_flag(namespace: Path<String>) {}

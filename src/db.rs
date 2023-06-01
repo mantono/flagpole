@@ -1,22 +1,22 @@
 use std::{
-    collections::{hash_map::DefaultHasher, HashMap},
+    collections::{hash_map::DefaultHasher, HashMap, HashSet},
     convert::Infallible,
     hash::{Hash, Hasher},
 };
 
-use crate::{namespace::Namespace, Config};
+use crate::namespace::Namespace;
 
 pub trait Database {
     type Error;
 
-    fn set_value(&mut self, ns: &Namespace, conf: Config) -> Result<(), Self::Error>;
-    fn get_values(&self, ns: &Namespace) -> Result<Config, Self::Error>;
+    fn set_value(&mut self, ns: &Namespace, flag: String) -> Result<(), Self::Error>;
+    fn get_values(&self, ns: &Namespace) -> Result<HashSet<String>, Self::Error>;
     fn etag(&self, ns: &Namespace) -> Result<u64, Self::Error>;
-    fn delete_flag(&mut self, ns: &Namespace, flag: &str) -> Result<(), Self::Error>;
+    fn delete_flag(&mut self, ns: &Namespace, flag: String) -> Result<(), Self::Error>;
 }
 
 pub struct InMemoryDb {
-    data: HashMap<Namespace, Config>,
+    data: HashMap<Namespace, HashSet<String>>,
     etags: HashMap<Namespace, u64>,
 }
 
@@ -32,46 +32,52 @@ impl InMemoryDb {
 impl InMemoryDb {
     fn update_etag(&mut self, ns: &Namespace) -> u64 {
         let mut hasher = DefaultHasher::new();
-        let ns_conf: &Config = self.data.get(&ns).unwrap_or_else(|| &HashMap::new());
-
-        ns_conf.iter().for_each(|(k, v)| {
-            k.hash(&mut hasher);
-            (*v).hash(&mut hasher);
-        });
-        let hash: u64 = hasher.finish();
-        self.etags.insert(ns.clone(), hash);
-        hash
+        match self.data.get(&ns) {
+            Some(ns_conf) => {
+                ns_conf.iter().for_each(|flag| {
+                    flag.hash(&mut hasher);
+                });
+                let hash: u64 = hasher.finish();
+                self.etags.insert(ns.clone(), hash);
+                hash
+            }
+            None => 0u64,
+        }
     }
 }
 
 impl Database for InMemoryDb {
     type Error = Infallible;
 
-    fn set_value(&mut self, key: Flag, conf: FlagConf) -> Result<(), Self::Error> {
-        let namespace: String = key.namespace().to_string();
-        self.data.insert(key, conf);
-        self.update_etag(&namespace);
+    fn set_value(&mut self, ns: &Namespace, flag: String) -> Result<(), Self::Error> {
+        match self.data.get_mut(&ns) {
+            Some(flags) => {
+                flags.insert(flag);
+            }
+            None => {
+                let mut flags = HashSet::new();
+                flags.insert(flag);
+                self.data.insert(ns.clone(), flags);
+            }
+        }
+        self.update_etag(ns);
         Ok(())
     }
 
-    fn get_values(&self, namespace: &str) -> Result<HashMap<Flag, FlagConf>, Self::Error> {
-        let data: HashMap<Flag, FlagConf> = self
-            .data
-            .iter()
-            .filter(|(k, _)| k.namespace() == namespace)
-            .map(|(k, v)| (k.clone(), v.clone()))
-            .collect();
-
+    fn get_values(&self, ns: &Namespace) -> Result<HashSet<String>, Self::Error> {
+        let data: HashSet<String> = self.data.get(ns).map(|m| m.clone()).unwrap_or_default();
         Ok(data)
     }
 
-    fn delete_flag(&mut self, key: Flag) -> Result<(), Self::Error> {
-        self.data.remove(&key);
-        self.update_etag(key.namespace());
+    fn delete_flag(&mut self, ns: &Namespace, flag: String) -> Result<(), Self::Error> {
+        if let Some(flags) = self.data.get_mut(ns) {
+            flags.remove(&flag);
+            self.update_etag(ns);
+        }
         Ok(())
     }
 
-    fn etag(&self, namespace: &str) -> Result<u64, Self::Error> {
-        Ok(*self.etags.get(namespace).unwrap_or(&0))
+    fn etag(&self, ns: &Namespace) -> Result<u64, Self::Error> {
+        Ok(*self.etags.get(ns).unwrap_or(&0))
     }
 }

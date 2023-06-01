@@ -1,10 +1,9 @@
-mod db;
+pub mod db;
 mod namespace;
 mod unstr;
-mod value;
 
-use crate::value::Config;
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
+use std::sync::RwLock;
 
 use axum::response::IntoResponse;
 use db::InMemoryDb;
@@ -16,7 +15,7 @@ async fn create_db() -> DbHandle {
     Arc::new(RwLock::new(database))
 }
 
-use axum::routing::{delete, get, head, patch, put};
+use axum::routing::{get, put};
 use axum::Router;
 use namespace::Namespace;
 
@@ -25,8 +24,8 @@ async fn main() {
     let db: DbHandle = create_db().await;
 
     let router = Router::new()
-        .route("/api/flags/:namespace", get(get_ns).head(head_ns).put(put_ns).patch(patch_ns))
-        .route("/api/flags/:namespace/:flag", delete(delete_flag))
+        .route("/api/flags/:namespace", get(get_ns).head(head_ns))
+        .route("/api/flags/:namespace/:flag", put(put_flag).delete(delete_flag))
         .with_state(db);
 
     axum::Server::bind(&"0.0.0.0:3000".parse().unwrap())
@@ -39,9 +38,18 @@ use crate::db::Database;
 use axum::extract::{Path, State};
 use axum::Json;
 use http::{header, StatusCode};
+use std::collections::HashSet;
 
-async fn get_ns(namespace: Path<String>, state: State<DbHandle>) -> (StatusCode, String) {
-    (StatusCode::OK, String::from("Hello world"))
+async fn get_ns(path: Path<String>, state: State<DbHandle>) -> impl IntoResponse {
+    let ns: Namespace = path.0.parse().unwrap();
+    let db = state.0.read().unwrap();
+    let etag: u64 = db.etag(&ns).unwrap();
+    let flags: HashSet<String> = db.get_values(&ns).unwrap();
+    let resp = Response {
+        namespace: ns,
+        flags,
+    };
+    (StatusCode::OK, [(header::ETAG, format!("{etag}"))], Json(resp))
 }
 
 async fn head_ns(path: Path<String>, state: State<DbHandle>) -> impl IntoResponse {
@@ -51,18 +59,26 @@ async fn head_ns(path: Path<String>, state: State<DbHandle>) -> impl IntoRespons
     (StatusCode::OK, [(header::ETAG, format!("{etag}"))])
 }
 
-async fn put_ns(
-    namespace: Path<String>,
-    body: Json<Config>,
+async fn put_flag(
+    Path((namespace, flag)): Path<(String, String)>,
+    state: State<DbHandle>,
+) -> StatusCode {
+    let namespace: Namespace = namespace.parse().unwrap();
+    state.0.write().unwrap().set_value(&namespace, flag).unwrap();
+    StatusCode::OK
+}
+
+async fn delete_flag(
+    Path((namespace, flag)): Path<(String, String)>,
     state: State<DbHandle>,
 ) -> (StatusCode, String) {
-    (StatusCode::OK, format!("{:?}", body.0))
-}
-
-async fn patch_ns(namespace: Path<String>, state: State<DbHandle>) -> (StatusCode, String) {
+    let ns: Namespace = namespace.parse().unwrap();
+    state.0.write().unwrap().delete_flag(&ns, flag).unwrap();
     (StatusCode::OK, String::from("Hello world"))
 }
 
-async fn delete_flag(namespace: Path<String>, state: State<DbHandle>) -> (StatusCode, String) {
-    (StatusCode::OK, String::from("Hello world"))
+#[derive(serde::Serialize)]
+struct Response {
+    pub namespace: Namespace,
+    pub flags: HashSet<String>,
 }

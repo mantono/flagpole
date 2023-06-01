@@ -1,5 +1,7 @@
 use std::{fmt::Display, hash::Hash, str::FromStr};
 
+use serde::Serialize;
+
 /// A String which consists only of characters which are "unreserved" according to RFC3986.
 ///
 /// These are
@@ -12,7 +14,7 @@ use std::{fmt::Display, hash::Hash, str::FromStr};
 /// - `~`
 ///
 /// These characters are always safe to use in the path of a URL.
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize)]
 pub struct UnreservedString(String);
 
 impl UnreservedString {

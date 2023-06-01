@@ -1,8 +1,10 @@
 use std::fmt::Display;
 
+use serde::Serialize;
+
 use crate::unstr::UnreservedString;
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize)]
 pub struct Namespace(UnreservedString);
 
 impl std::str::FromStr for Namespace {
@@ -17,7 +19,7 @@ impl std::str::FromStr for Namespace {
 }
 
 #[derive(Debug, Clone, Copy)]
-enum Error {
+pub enum Error {
     Length,
     Character,
 }

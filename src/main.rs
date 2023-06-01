@@ -1,12 +1,10 @@
-mod api;
-mod db;
-mod flag;
-mod unstr;
+pub mod db;
 
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
+use std::sync::RwLock;
 
+use axum::response::IntoResponse;
 use db::InMemoryDb;
-use warp::Filter;
 
 type DbHandle = Arc<RwLock<InMemoryDb>>;
 
@@ -15,19 +13,64 @@ async fn create_db() -> DbHandle {
     Arc::new(RwLock::new(database))
 }
 
+use axum::routing::{get, put};
+use axum::Router;
+
 #[tokio::main]
 async fn main() {
-    let database: DbHandle = create_db().await;
-    let db = warp::any().map(move || database.clone());
+    let db: DbHandle = create_db().await;
 
-    let flags = warp::path!("api" / "v1" / "flags" / String);
-    let flag = warp::path!("api" / "v1" / "flags" / String / String);
-    let head_flags = flags.and(warp::head()).and(db.clone()).map(api::head_flags);
-    let get_flags = flags.and(warp::get()).and(db.clone()).map(api::get_flags);
-    let put_flag = flag.and(warp::put()).and(warp::body::json()).and(db.clone()).map(api::put_flag);
-    let delete_flag = flag.and(warp::delete()).and(db.clone()).map(api::delete_flag);
+    let router = Router::new()
+        .route("/api/flags/:namespace", get(get_ns).head(head_ns))
+        .route("/api/flags/:namespace/:flag", put(put_flag).delete(delete_flag))
+        .with_state(db);
 
-    let routes = put_flag.or(delete_flag).or(head_flags).or(get_flags);
+    axum::Server::bind(&"0.0.0.0:3000".parse().unwrap())
+        .serve(router.into_make_service())
+        .await
+        .unwrap();
+}
 
-    warp::serve(routes).run(([127, 0, 0, 1], 8080)).await
+use crate::db::Database;
+use axum::extract::{Path, State};
+use axum::Json;
+use http::{header, StatusCode};
+use std::collections::HashSet;
+
+async fn get_ns(path: Path<String>, state: State<DbHandle>) -> impl IntoResponse {
+    let namespace: String = path.0;
+    let db = state.0.read().unwrap();
+    let etag: u64 = db.etag(&namespace).unwrap();
+    let flags: HashSet<String> = db.get_values(&namespace).unwrap();
+    let resp = Response { namespace, flags };
+    (StatusCode::OK, [(header::ETAG, format!("{etag}"))], Json(resp))
+}
+
+async fn head_ns(path: Path<String>, state: State<DbHandle>) -> impl IntoResponse {
+    let namespace: String = path.0;
+    let etag: u64 = state.0.read().unwrap().etag(&namespace).unwrap();
+
+    (StatusCode::OK, [(header::ETAG, format!("{etag}"))])
+}
+
+async fn put_flag(
+    Path((namespace, flag)): Path<(String, String)>,
+    state: State<DbHandle>,
+) -> StatusCode {
+    state.0.write().unwrap().set_value(&namespace, flag).unwrap();
+    StatusCode::OK
+}
+
+async fn delete_flag(
+    Path((namespace, flag)): Path<(String, String)>,
+    state: State<DbHandle>,
+) -> (StatusCode, String) {
+    state.0.write().unwrap().delete_flag(&namespace, flag).unwrap();
+    (StatusCode::OK, String::from("Hello world"))
+}
+
+#[derive(serde::Serialize)]
+struct Response {
+    pub namespace: String,
+    pub flags: HashSet<String>,
 }

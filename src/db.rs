@@ -4,20 +4,20 @@ use std::{
     hash::{Hash, Hasher},
 };
 
-use crate::flag::{Flag, FlagConf};
+use crate::{namespace::Namespace, Config};
 
 pub trait Database {
     type Error;
 
-    fn set_value(&mut self, key: Flag, conf: FlagConf) -> Result<(), Self::Error>;
-    fn get_values(&self, namespace: &str) -> Result<HashMap<Flag, FlagConf>, Self::Error>;
-    fn etag(&self, namespace: &str) -> Result<u64, Self::Error>;
-    fn delete_flag(&mut self, key: Flag) -> Result<(), Self::Error>;
+    fn set_value(&mut self, ns: &Namespace, conf: Config) -> Result<(), Self::Error>;
+    fn get_values(&self, ns: &Namespace) -> Result<Config, Self::Error>;
+    fn etag(&self, ns: &Namespace) -> Result<u64, Self::Error>;
+    fn delete_flag(&mut self, ns: &Namespace, flag: &str) -> Result<(), Self::Error>;
 }
 
 pub struct InMemoryDb {
-    data: HashMap<Flag, FlagConf>,
-    etags: HashMap<String, u64>,
+    data: HashMap<Namespace, Config>,
+    etags: HashMap<Namespace, u64>,
 }
 
 impl InMemoryDb {
@@ -30,18 +30,16 @@ impl InMemoryDb {
 }
 
 impl InMemoryDb {
-    fn update_etag(&mut self, namespace: &str) -> u64 {
+    fn update_etag(&mut self, ns: &Namespace) -> u64 {
         let mut hasher = DefaultHasher::new();
-        self.data
-            .iter()
-            .filter(|(k, _)| k.namespace() == namespace)
-            .map(|(k, v)| (k.clone(), v.clone()))
-            .for_each(|(k, v)| {
-                k.hash(&mut hasher);
-                v.hash(&mut hasher);
-            });
+        let ns_conf: &Config = self.data.get(&ns).unwrap_or_else(|| &HashMap::new());
+
+        ns_conf.iter().for_each(|(k, v)| {
+            k.hash(&mut hasher);
+            (*v).hash(&mut hasher);
+        });
         let hash: u64 = hasher.finish();
-        self.etags.insert(namespace.to_string(), hash);
+        self.etags.insert(ns.clone(), hash);
         hash
     }
 }

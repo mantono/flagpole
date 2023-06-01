@@ -1,6 +1,4 @@
 pub mod db;
-mod namespace;
-mod unstr;
 
 use std::sync::Arc;
 use std::sync::RwLock;
@@ -17,7 +15,6 @@ async fn create_db() -> DbHandle {
 
 use axum::routing::{get, put};
 use axum::Router;
-use namespace::Namespace;
 
 #[tokio::main]
 async fn main() {
@@ -41,20 +38,17 @@ use http::{header, StatusCode};
 use std::collections::HashSet;
 
 async fn get_ns(path: Path<String>, state: State<DbHandle>) -> impl IntoResponse {
-    let ns: Namespace = path.0.parse().unwrap();
+    let namespace: String = path.0;
     let db = state.0.read().unwrap();
-    let etag: u64 = db.etag(&ns).unwrap();
-    let flags: HashSet<String> = db.get_values(&ns).unwrap();
-    let resp = Response {
-        namespace: ns,
-        flags,
-    };
+    let etag: u64 = db.etag(&namespace).unwrap();
+    let flags: HashSet<String> = db.get_values(&namespace).unwrap();
+    let resp = Response { namespace, flags };
     (StatusCode::OK, [(header::ETAG, format!("{etag}"))], Json(resp))
 }
 
 async fn head_ns(path: Path<String>, state: State<DbHandle>) -> impl IntoResponse {
-    let ns: Namespace = path.0.parse().unwrap();
-    let etag: u64 = state.0.read().unwrap().etag(&ns).unwrap();
+    let namespace: String = path.0;
+    let etag: u64 = state.0.read().unwrap().etag(&namespace).unwrap();
 
     (StatusCode::OK, [(header::ETAG, format!("{etag}"))])
 }
@@ -63,7 +57,6 @@ async fn put_flag(
     Path((namespace, flag)): Path<(String, String)>,
     state: State<DbHandle>,
 ) -> StatusCode {
-    let namespace: Namespace = namespace.parse().unwrap();
     state.0.write().unwrap().set_value(&namespace, flag).unwrap();
     StatusCode::OK
 }
@@ -72,13 +65,12 @@ async fn delete_flag(
     Path((namespace, flag)): Path<(String, String)>,
     state: State<DbHandle>,
 ) -> (StatusCode, String) {
-    let ns: Namespace = namespace.parse().unwrap();
-    state.0.write().unwrap().delete_flag(&ns, flag).unwrap();
+    state.0.write().unwrap().delete_flag(&namespace, flag).unwrap();
     (StatusCode::OK, String::from("Hello world"))
 }
 
 #[derive(serde::Serialize)]
 struct Response {
-    pub namespace: Namespace,
+    pub namespace: String,
     pub flags: HashSet<String>,
 }

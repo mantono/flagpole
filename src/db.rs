@@ -35,6 +35,12 @@ impl InMemoryDb {
     }
 }
 
+impl Default for InMemoryDb {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Database for InMemoryDb {
     type Error = Infallible;
 

@@ -53,7 +53,7 @@ impl Database for InMemoryDb {
     }
 
     fn get_values(&self, namespace: &str) -> Result<HashSet<String>, Self::Error> {
-        let data: HashSet<String> = self.data.get(namespace).map(|m| m.clone()).unwrap_or_default();
+        let data: HashSet<String> = self.data.get(namespace).cloned().unwrap_or_default();
         Ok(data)
     }
 

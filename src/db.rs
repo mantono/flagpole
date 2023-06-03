@@ -1,7 +1,6 @@
 use std::{
-    collections::{hash_map::DefaultHasher, HashMap, HashSet},
+    collections::{HashMap, HashSet},
     convert::Infallible,
-    hash::{Hash, Hasher},
 };
 
 pub trait Database {
@@ -9,13 +8,13 @@ pub trait Database {
 
     fn set_value(&mut self, namespace: &str, flag: String) -> Result<(), Self::Error>;
     fn get_values(&self, namespace: &str) -> Result<HashSet<String>, Self::Error>;
-    fn etag(&self, namespace: &str) -> Result<u64, Self::Error>;
+    fn etag(&self, namespace: &str) -> Result<u128, Self::Error>;
     fn delete_flag(&mut self, namespace: &str, flag: String) -> Result<(), Self::Error>;
 }
 
 pub struct InMemoryDb {
     data: HashMap<String, HashSet<String>>,
-    etags: HashMap<String, u64>,
+    etags: HashMap<String, u128>,
 }
 
 impl InMemoryDb {
@@ -28,19 +27,13 @@ impl InMemoryDb {
 }
 
 impl InMemoryDb {
-    fn update_etag(&mut self, namespace: &str) -> u64 {
-        let mut hasher = DefaultHasher::new();
-        match self.data.get(namespace) {
-            Some(ns_conf) => {
-                ns_conf.iter().for_each(|flag| {
-                    flag.hash(&mut hasher);
-                });
-                let hash: u64 = hasher.finish();
-                self.etags.insert(namespace.to_owned(), hash);
-                hash
-            }
-            None => 0u64,
-        }
+    fn update_etag(&mut self, namespace: &str) -> u128 {
+        let etag: u128 = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_millis();
+        self.etags.insert(namespace.to_owned(), etag);
+        etag
     }
 }
 
@@ -48,17 +41,16 @@ impl Database for InMemoryDb {
     type Error = Infallible;
 
     fn set_value(&mut self, namespace: &str, flag: String) -> Result<(), Self::Error> {
-        match self.data.get_mut(namespace) {
-            Some(flags) => {
-                flags.insert(flag);
-            }
+        let updated: bool = match self.data.get_mut(namespace) {
+            Some(flags) => flags.insert(flag),
             None => {
-                let mut flags = HashSet::new();
-                flags.insert(flag);
-                self.data.insert(namespace.to_owned(), flags);
+                self.data.insert(namespace.to_owned(), HashSet::from_iter(vec![flag]));
+                true
             }
+        };
+        if updated {
+            self.update_etag(namespace);
         }
-        self.update_etag(namespace);
         Ok(())
     }
 
@@ -69,13 +61,14 @@ impl Database for InMemoryDb {
 
     fn delete_flag(&mut self, namespace: &str, flag: String) -> Result<(), Self::Error> {
         if let Some(flags) = self.data.get_mut(namespace) {
-            flags.remove(&flag);
-            self.update_etag(namespace);
+            if flags.remove(&flag) {
+                self.update_etag(namespace);
+            }
         }
         Ok(())
     }
 
-    fn etag(&self, namespace: &str) -> Result<u64, Self::Error> {
+    fn etag(&self, namespace: &str) -> Result<u128, Self::Error> {
         Ok(*self.etags.get(namespace).unwrap_or(&0))
     }
 }

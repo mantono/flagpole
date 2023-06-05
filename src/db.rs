@@ -6,10 +6,10 @@ use std::{
 pub trait Database {
     type Error;
 
-    fn set_value(&mut self, namespace: &str, flag: String) -> Result<(), Self::Error>;
+    fn set_value(&mut self, namespace: &str, flag: String) -> Result<bool, Self::Error>;
     fn get_values(&self, namespace: &str) -> Result<HashSet<String>, Self::Error>;
     fn etag(&self, namespace: &str) -> Result<u128, Self::Error>;
-    fn delete_flag(&mut self, namespace: &str, flag: String) -> Result<(), Self::Error>;
+    fn delete_flag(&mut self, namespace: &str, flag: String) -> Result<bool, Self::Error>;
 }
 
 pub struct InMemoryDb {
@@ -44,7 +44,7 @@ impl Default for InMemoryDb {
 impl Database for InMemoryDb {
     type Error = Infallible;
 
-    fn set_value(&mut self, namespace: &str, flag: String) -> Result<(), Self::Error> {
+    fn set_value(&mut self, namespace: &str, flag: String) -> Result<bool, Self::Error> {
         let updated: bool = match self.data.get_mut(namespace) {
             Some(flags) => flags.insert(flag),
             None => {
@@ -55,7 +55,7 @@ impl Database for InMemoryDb {
         if updated {
             self.update_etag(namespace);
         }
-        Ok(())
+        Ok(updated)
     }
 
     fn get_values(&self, namespace: &str) -> Result<HashSet<String>, Self::Error> {
@@ -63,13 +63,15 @@ impl Database for InMemoryDb {
         Ok(data)
     }
 
-    fn delete_flag(&mut self, namespace: &str, flag: String) -> Result<(), Self::Error> {
-        if let Some(flags) = self.data.get_mut(namespace) {
-            if flags.remove(&flag) {
-                self.update_etag(namespace);
-            }
+    fn delete_flag(&mut self, namespace: &str, flag: String) -> Result<bool, Self::Error> {
+        let updated: bool = match self.data.get_mut(namespace) {
+            Some(flags) => flags.remove(&flag),
+            None => false,
+        };
+        if updated {
+            self.update_etag(namespace);
         }
-        Ok(())
+        Ok(updated)
     }
 
     fn etag(&self, namespace: &str) -> Result<u128, Self::Error> {

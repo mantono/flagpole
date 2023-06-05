@@ -18,6 +18,8 @@ use axum::Router;
 
 #[tokio::main]
 async fn main() {
+    #[cfg(feature = "logging")]
+    env_logger::init();
     let db: DbHandle = create_db().await;
 
     let router = Router::new()
@@ -56,16 +58,24 @@ async fn put_flag(
     Path((namespace, flag)): Path<(String, String)>,
     state: State<DbHandle>,
 ) -> StatusCode {
-    state.0.write().unwrap().set_value(&namespace, flag).unwrap();
+    let updated: bool = state.0.write().unwrap().set_value(&namespace, flag.clone()).unwrap();
+    if updated {
+        #[cfg(feature = "logging")]
+        log::info!("Flag {flag} enabled in namespace {namespace}");
+    }
     StatusCode::OK
 }
 
 async fn delete_flag(
     Path((namespace, flag)): Path<(String, String)>,
     state: State<DbHandle>,
-) -> (StatusCode, String) {
-    state.0.write().unwrap().delete_flag(&namespace, flag).unwrap();
-    (StatusCode::OK, String::from("Hello world"))
+) -> StatusCode {
+    let updated: bool = state.0.write().unwrap().delete_flag(&namespace, flag.clone()).unwrap();
+    if updated {
+        #[cfg(feature = "logging")]
+        log::info!("Flag {flag} disabled in namespace {namespace}");
+    }
+    StatusCode::OK
 }
 
 #[derive(serde::Serialize)]

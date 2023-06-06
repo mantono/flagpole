@@ -1,5 +1,2 @@
-# Set a flag for namespace
 method: PUT
 url: http://{{API_URL}}/api/flags/{{NAMESPACE}}/{{FLAG}}
-headers:
-  accept: application/json

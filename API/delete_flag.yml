@@ -1,0 +1,2 @@
+method: DELETE
+url: http://{{API_URL}}/api/flags/{{NAMESPACE}}/{{FLAG}}

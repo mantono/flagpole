@@ -3,7 +3,7 @@ Flagpole is a minimal and simple service for hosting feature flagging configurat
 
 ## Project Priorities
 #### Simple
-The API - and code - should be intuitive and unsurprising. _Less is more_ should be a guiding principle.
+The API - and code - should be intuitive and unsurprising. _Less is more_ is a guiding principle.
 
 #### Resource Efficient
 Running the service should require minmal resources, both in terms of memory and CPU usage.

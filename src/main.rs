@@ -63,7 +63,7 @@ async fn put_flag(
         #[cfg(feature = "logging")]
         log::info!("Flag {flag} enabled in namespace {namespace}");
     }
-    StatusCode::OK
+    StatusCode::NO_CONTENT
 }
 
 async fn delete_flag(
@@ -75,7 +75,7 @@ async fn delete_flag(
         #[cfg(feature = "logging")]
         log::info!("Flag {flag} disabled in namespace {namespace}");
     }
-    StatusCode::OK
+    StatusCode::NO_CONTENT
 }
 
 #[derive(serde::Serialize)]

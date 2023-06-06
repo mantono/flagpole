@@ -1,5 +1,3 @@
 # HEAD for all flags for a given namespace
 method: HEAD
 url: http://{{API_URL}}/api/flags/{{NAMESPACE}}
-headers:
-  accept: application/json

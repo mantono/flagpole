@@ -27,4 +27,4 @@ See [API](API/) directory for documentation about the different API requests and
 | Feature   | Enabled by Default | Comment |
 | :-------: | :---------------:  | :------ |   
 | `logging` | true               | Add support for logging |
-| `redis`   | false              | Persist feature flags to Redis (currently not available) |
+| ~`redis`~   | false              | Persist feature flags to Redis (currently not available) |

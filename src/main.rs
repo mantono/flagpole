@@ -1,9 +1,13 @@
-pub mod db;
+mod cfg;
+mod db;
 
+use std::net::SocketAddr;
 use std::sync::Arc;
 use std::sync::RwLock;
 
 use axum::response::IntoResponse;
+use cfg::Config;
+use clap::Parser;
 use db::InMemoryDb;
 
 type DbHandle = Arc<RwLock<InMemoryDb>>;
@@ -18,8 +22,16 @@ use axum::Router;
 
 #[tokio::main]
 async fn main() {
+    let cfg: Config = Config::parse();
     #[cfg(feature = "logging")]
-    env_logger::init();
+    env_logger::Builder::new()
+        .filter_level(cfg.log_level().to_level_filter())
+        .init();
+
+    if let None = cfg.api_key() {
+        log::warn!("No API key is configured, authentication is disabled");
+    }
+
     let db: DbHandle = create_db().await;
 
     let router = Router::new()
@@ -27,10 +39,9 @@ async fn main() {
         .route("/api/flags/:namespace/:flag", put(put_flag).delete(delete_flag))
         .with_state(db);
 
-    axum::Server::bind(&"0.0.0.0:3000".parse().unwrap())
-        .serve(router.into_make_service())
-        .await
-        .unwrap();
+    let addr: SocketAddr = cfg.address().unwrap();
+    log::info!("Running flagpole on {:?}", addr);
+    axum::Server::bind(&addr).serve(router.into_make_service()).await.unwrap();
 }
 
 use crate::db::Database;
@@ -75,7 +86,7 @@ async fn delete_flag(
         #[cfg(feature = "logging")]
         log::info!("Flag {flag} disabled in namespace {namespace}");
     }
-    StatusCode::NO_CONTENT
+    StatusCode::OK
 }
 
 #[derive(serde::Serialize)]

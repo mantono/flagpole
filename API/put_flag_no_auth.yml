@@ -1,4 +1,2 @@
 method: PUT
 url: http://{{API_URL}}/api/flags/{{NAMESPACE}}/{{FLAG}}
-headers:
-  Authorization: ApiKey {{API_KEY}}

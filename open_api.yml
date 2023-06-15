@@ -1,0 +1,99 @@
+openapi: 3.0.0
+info:
+  title: Flagpole API
+  version: 1.0.0
+
+paths:
+  /api/flags/{namespace}:
+    get:
+      summary: Get flags for a namespace
+      parameters:
+        - in: path
+          name: namespace
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Response'
+
+    head:
+      summary: Get flags ETag for a namespace
+      parameters:
+        - in: path
+          name: namespace
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          headers:
+            ETag:
+              schema:
+                type: string
+
+  /api/flags/{namespace}/{flag}:
+    put:
+      summary: Enable a flag in a namespace
+      parameters:
+        - in: path
+          name: namespace
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: flag
+          required: true
+          schema:
+            type: string
+      security:
+        - ApiKeyAuth: []
+      responses:
+        '204':
+          description: No Content
+        '401':
+          description: Unauthorized
+
+    delete:
+      summary: Disable a flag in a namespace
+      parameters:
+        - in: path
+          name: namespace
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: flag
+          required: true
+          schema:
+            type: string
+      security:
+        - ApiKeyAuth: []
+      responses:
+        '204':
+          description: No Content
+        '401':
+          description: Unauthorized
+
+components:
+  schemas:
+    Response:
+      type: object
+      properties:
+        namespace:
+          type: string
+        flags:
+          type: array
+          items:
+            type: string
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: Authorization
+      description: Prefix the API key with 'ApiKey'

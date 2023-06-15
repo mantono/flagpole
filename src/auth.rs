@@ -9,12 +9,7 @@ impl axum::headers::authorization::Credentials for ApiKey {
     fn decode(value: &HeaderValue) -> Option<Self> {
         let offset = Self::SCHEME.len() + 1;
 
-        value
-            .to_str()
-            .ok()
-            .map(|v| v.get(offset..))
-            .flatten()
-            .map(|s| ApiKey(s.to_string()))
+        value.to_str().ok().and_then(|v| v.get(offset..)).map(|s| ApiKey(s.to_string()))
     }
 
     fn encode(&self) -> HeaderValue {

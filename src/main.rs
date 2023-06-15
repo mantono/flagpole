@@ -29,7 +29,7 @@ async fn main() {
         .filter_level(cfg.log_level().to_level_filter())
         .init();
 
-    if let None = cfg.api_key() {
+    if cfg.api_key().is_none() {
         log::warn!("No API key is configured, authentication is disabled");
     }
 

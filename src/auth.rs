@@ -7,14 +7,14 @@ impl axum::headers::authorization::Credentials for ApiKey {
     const SCHEME: &'static str = "ApiKey";
 
     fn decode(value: &HeaderValue) -> Option<Self> {
-        let prefix_len: usize = Self::SCHEME.len() + 1;
-        if value.len() > prefix_len {
-            let value: String =
-                value.to_str().unwrap_or_default().get(prefix_len..).unwrap().to_string();
-            Some(ApiKey(value))
-        } else {
-            None
-        }
+        let offset = Self::SCHEME.len() + 1;
+
+        value
+            .to_str()
+            .ok()
+            .map(|v| v.get(offset..))
+            .flatten()
+            .map(|s| ApiKey(s.to_string()))
     }
 
     fn encode(&self) -> HeaderValue {

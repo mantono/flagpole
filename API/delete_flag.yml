@@ -1,2 +1,4 @@
 method: DELETE
+headers:
+  Authorization: ApiKey {{API_KEY}}
 url: http://{{API_URL}}/api/flags/{{NAMESPACE}}/{{FLAG}}

@@ -8,13 +8,13 @@ pub trait Database {
 
     fn set_value(&mut self, namespace: &str, flag: String) -> Result<bool, Self::Error>;
     fn get_values(&self, namespace: &str) -> Result<HashSet<String>, Self::Error>;
-    fn etag(&self, namespace: &str) -> Result<u128, Self::Error>;
+    fn etag(&self, namespace: &str) -> Result<&str, Self::Error>;
     fn delete_flag(&mut self, namespace: &str, flag: String) -> Result<bool, Self::Error>;
 }
 
 pub struct InMemoryDb {
     data: HashMap<String, HashSet<String>>,
-    etags: HashMap<String, u128>,
+    etags: HashMap<String, String>,
 }
 
 impl InMemoryDb {
@@ -30,7 +30,7 @@ impl InMemoryDb {
             .duration_since(std::time::UNIX_EPOCH)
             .unwrap_or_default()
             .as_millis();
-        self.etags.insert(namespace.to_owned(), etag);
+        self.etags.insert(namespace.to_owned(), format!("{etag:x}"));
         etag
     }
 }
@@ -74,7 +74,11 @@ impl Database for InMemoryDb {
         Ok(updated)
     }
 
-    fn etag(&self, namespace: &str) -> Result<u128, Self::Error> {
-        Ok(*self.etags.get(namespace).unwrap_or(&0))
+    fn etag(&self, namespace: &str) -> Result<&str, Self::Error> {
+        let etag = match self.etags.get(namespace) {
+            Some(etag) => etag.as_str(),
+            None => "",
+        };
+        Ok(etag)
     }
 }

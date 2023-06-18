@@ -1,5 +1,5 @@
 # flagpole
-Flagpole is a minimal and simple service for hosting feature flagging configurations.
+Flagpole is a minimal and simple service for hosting [feature flagging](https://featureflags.io/feature-flag-introduction) configurations.
 
 ## Project Priorities
 #### Simple

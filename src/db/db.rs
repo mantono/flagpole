@@ -5,10 +5,11 @@ use std::{
 
 pub trait Database {
     type Error;
+    type ETag: std::fmt::Display;
 
     fn set_value(&mut self, namespace: &str, flag: String) -> Result<bool, Self::Error>;
     fn get_values(&self, namespace: &str) -> Result<HashSet<String>, Self::Error>;
-    fn etag(&self, namespace: &str) -> Result<&str, Self::Error>;
+    fn etag(&self, namespace: &str) -> Result<Self::ETag, Self::Error>;
     fn delete_flag(&mut self, namespace: &str, flag: String) -> Result<bool, Self::Error>;
 }
 
@@ -43,6 +44,7 @@ impl Default for InMemoryDb {
 
 impl Database for InMemoryDb {
     type Error = Infallible;
+    type ETag = String;
 
     fn set_value(&mut self, namespace: &str, flag: String) -> Result<bool, Self::Error> {
         let updated: bool = match self.data.get_mut(namespace) {
@@ -74,10 +76,10 @@ impl Database for InMemoryDb {
         Ok(updated)
     }
 
-    fn etag(&self, namespace: &str) -> Result<&str, Self::Error> {
+    fn etag(&self, namespace: &str) -> Result<String, Self::Error> {
         let etag = match self.etags.get(namespace) {
-            Some(etag) => etag.as_str(),
-            None => "",
+            Some(etag) => etag.to_string(),
+            None => String::default(),
         };
         Ok(etag)
     }

@@ -11,7 +11,7 @@ use cfg::Config;
 use clap::Parser;
 use db::InMemoryDb;
 
-type DbHandle = Arc<RwLock<InMemoryDb>>;
+pub type DbHandle = Arc<RwLock<InMemoryDb>>;
 
 async fn create_db() -> DbHandle {
     let database = InMemoryDb::new();

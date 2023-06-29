@@ -9,7 +9,7 @@ use std::sync::RwLock;
 use axum::response::IntoResponse;
 use cfg::Config;
 use clap::Parser;
-use db::InMemoryDb;
+use db::mem::InMemoryDb;
 
 pub type DbHandle = Arc<RwLock<InMemoryDb>>;
 
@@ -54,7 +54,6 @@ struct AppState {
 }
 
 use crate::auth::{accept_auth, ApiKey};
-use crate::db::Database;
 
 use axum::extract::{Path, State};
 use axum::headers::Authorization;

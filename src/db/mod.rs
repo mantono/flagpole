@@ -6,8 +6,6 @@ pub mod mem;
 #[cfg(feature = "redis")]
 pub mod redis;
 
-//pub type DbHandle<R, T> = Arc<RwLock<dyn Database<R, E>>>;
-
 pub async fn create_db() -> Arc<RwLock<impl Database>> {
     #[cfg(not(feature = "redis"))]
     let database = mem::InMemoryDb::new();

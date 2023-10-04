@@ -9,17 +9,10 @@ use std::sync::RwLock;
 use axum::response::IntoResponse;
 use cfg::Config;
 use clap::Parser;
-use db::InMemoryDb;
-
-pub type DbHandle = Arc<RwLock<InMemoryDb>>;
-
-async fn create_db() -> DbHandle {
-    let database = InMemoryDb::new();
-    Arc::new(RwLock::new(database))
-}
 
 use axum::routing::{get, put};
 use axum::Router;
+use db::Database;
 
 #[tokio::main]
 async fn main() {
@@ -34,7 +27,7 @@ async fn main() {
     }
 
     let state = AppState {
-        db: create_db().await,
+        db: db::create_db().await,
         api_key: cfg.api_key(),
     };
     let router = Router::new()
@@ -48,13 +41,15 @@ async fn main() {
 }
 
 #[derive(Clone)]
-struct AppState {
-    db: DbHandle,
+struct AppState<T>
+where
+    T: Database,
+{
+    db: Arc<RwLock<T>>,
     api_key: Option<String>,
 }
 
 use crate::auth::{accept_auth, ApiKey};
-use crate::db::Database;
 
 use axum::extract::{Path, State};
 use axum::headers::Authorization;
@@ -63,26 +58,26 @@ use axum::TypedHeader;
 use http::{header, StatusCode};
 use std::collections::HashSet;
 
-async fn get_ns(path: Path<String>, state: State<AppState>) -> impl IntoResponse {
+async fn get_ns(path: Path<String>, state: State<AppState<impl Database>>) -> impl IntoResponse {
     let namespace: String = path.0;
     let db = state.0.db.read().unwrap();
-    let etag: &str = db.etag(&namespace).unwrap();
+    let etag = db.etag(&namespace).unwrap();
     let flags: HashSet<String> = db.get_values(&namespace).unwrap();
     let resp = Response { namespace, flags };
     (StatusCode::OK, [(header::ETAG, format!("{etag}"))], Json(resp))
 }
 
-async fn head_ns(path: Path<String>, state: State<AppState>) -> impl IntoResponse {
+async fn head_ns(path: Path<String>, state: State<AppState<impl Database>>) -> impl IntoResponse {
     let namespace: String = path.0;
     let db = state.0.db.read().unwrap();
-    let etag: &str = db.etag(&namespace).unwrap();
+    let etag = db.etag(&namespace).unwrap();
     (StatusCode::OK, [(header::ETAG, format!("{etag}"))])
 }
 
 async fn put_flag(
     Path((namespace, flag)): Path<(String, String)>,
     auth: Option<TypedHeader<Authorization<ApiKey>>>,
-    state: State<AppState>,
+    state: State<AppState<impl Database>>,
 ) -> StatusCode {
     if !accept_auth(&state.api_key, auth) {
         return StatusCode::UNAUTHORIZED;
@@ -98,7 +93,7 @@ async fn put_flag(
 async fn delete_flag(
     Path((namespace, flag)): Path<(String, String)>,
     auth: Option<TypedHeader<Authorization<ApiKey>>>,
-    state: State<AppState>,
+    state: State<AppState<impl Database>>,
 ) -> StatusCode {
     if !accept_auth(&state.api_key, auth) {
         return StatusCode::UNAUTHORIZED;

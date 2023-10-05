@@ -61,7 +61,7 @@ use std::collections::HashSet;
 async fn get_ns(path: Path<String>, state: State<AppState<impl Database>>) -> impl IntoResponse {
     let namespace: String = path.0;
     let db = state.0.db.read().unwrap();
-    let etag = db.etag(&namespace).unwrap();
+    let etag: String = db.etag(&namespace);
     let flags: HashSet<String> = db.get_values(&namespace).unwrap();
     let resp = Response { namespace, flags };
     (StatusCode::OK, [(header::ETAG, format!("{etag}"))], Json(resp))
@@ -70,8 +70,8 @@ async fn get_ns(path: Path<String>, state: State<AppState<impl Database>>) -> im
 async fn head_ns(path: Path<String>, state: State<AppState<impl Database>>) -> impl IntoResponse {
     let namespace: String = path.0;
     let db = state.0.db.read().unwrap();
-    let etag = db.etag(&namespace).unwrap();
-    (StatusCode::OK, [(header::ETAG, format!("{etag}"))])
+    let etag: String = db.etag(&namespace);
+    (StatusCode::OK, [(header::ETAG, etag)])
 }
 
 async fn put_flag(

@@ -37,7 +37,6 @@ impl Default for InMemoryDb {
 
 impl Database for InMemoryDb {
     type Error = Infallible;
-    type ETag = String;
 
     fn set_value(&mut self, namespace: &str, flag: String) -> Result<bool, Self::Error> {
         let updated: bool = match self.data.get_mut(namespace) {
@@ -69,11 +68,10 @@ impl Database for InMemoryDb {
         Ok(updated)
     }
 
-    fn etag(&self, namespace: &str) -> Result<String, Self::Error> {
-        let etag = match self.etags.get(namespace) {
+    fn etag(&self, namespace: &str) -> String {
+        match self.etags.get(namespace) {
             Some(etag) => etag.to_string(),
             None => String::default(),
-        };
-        Ok(etag)
+        }
     }
 }

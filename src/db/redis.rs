@@ -34,7 +34,6 @@ impl RedisDb {
 
 impl Database for RedisDb {
     type Error = RedisError;
-    type ETag = String;
 
     fn set_value(&mut self, namespace: &str, flag: String) -> Result<bool, Self::Error> {
         let mut connection = self.get_conn()?;
@@ -56,12 +55,11 @@ impl Database for RedisDb {
         Ok(members)
     }
 
-    fn etag(&self, namespace: &str) -> Result<Self::ETag, Self::Error> {
-        let etag = match self.etags.get(namespace) {
+    fn etag(&self, namespace: &str) -> String {
+        match self.etags.get(namespace) {
             Some(etag) => etag.to_string(),
             None => String::default(),
-        };
-        Ok(etag)
+        }
     }
 
     fn delete_flag(&mut self, namespace: &str, flag: String) -> Result<bool, Self::Error> {

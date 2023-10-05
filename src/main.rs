@@ -27,7 +27,7 @@ async fn main() {
     }
 
     let state = AppState {
-        db: db::create_db().await,
+        db: db::create_db(&cfg).await,
         api_key: cfg.api_key(),
     };
     let router = Router::new()

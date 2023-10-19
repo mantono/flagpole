@@ -1,0 +1,47 @@
+name: Build & Test
+on:
+  push:
+    paths:
+      - "**/Cargo.toml"
+      - "**/Cargo.lock"
+      - "src/**"
+      - "tests/**"
+      - ".github/workflows/rust.yml"
+env:
+  # For Rust versions prior to 1.68
+  CARGO_UNSTABLE_SPARSE_REGISTRY: true
+  # For 1.68 up until 1.70 later (after 1.70 this will become the default)
+  CARGO_REGISTRIES_CRATES_IO_PROTOCOL: sparse
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [macos-latest, windows-latest, ubuntu-latest]
+      max-parallel: 3
+      fail-fast: false
+    steps:
+      - uses: actions/checkout@v1
+      - uses: actions/cache@v1
+        id: cache-cargo-fetch
+        with:
+          key: ${{ runner.os }}-cargo-fetch-${{ hashFiles('Cargo.lock') }}
+          path: target
+          restore-keys: ${{ runner.os }}-cargo-fetch
+      - name: Fetch Dependencies
+        if: steps.cache-cargo-fetch.outputs.cache-hit != 'true'
+        run: cargo fetch
+      - name: Build
+        run: cargo build --all-features
+      - name: Run tests
+        run: cargo test
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+      - run: rustup component add clippy
+      - uses: clechasseur/rs-clippy-check@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          args: --all-features

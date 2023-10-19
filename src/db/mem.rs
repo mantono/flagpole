@@ -3,15 +3,9 @@ use std::{
     convert::Infallible,
 };
 
-pub trait Database {
-    type Error;
+use crate::Database;
 
-    fn set_value(&mut self, namespace: &str, flag: String) -> Result<bool, Self::Error>;
-    fn get_values(&self, namespace: &str) -> Result<HashSet<String>, Self::Error>;
-    fn etag(&self, namespace: &str) -> Result<&str, Self::Error>;
-    fn delete_flag(&mut self, namespace: &str, flag: String) -> Result<bool, Self::Error>;
-}
-
+#[derive(Clone)]
 pub struct InMemoryDb {
     data: HashMap<String, HashSet<String>>,
     etags: HashMap<String, String>,
@@ -74,11 +68,10 @@ impl Database for InMemoryDb {
         Ok(updated)
     }
 
-    fn etag(&self, namespace: &str) -> Result<&str, Self::Error> {
-        let etag = match self.etags.get(namespace) {
-            Some(etag) => etag.as_str(),
-            None => "",
-        };
-        Ok(etag)
+    fn etag(&self, namespace: &str) -> String {
+        match self.etags.get(namespace) {
+            Some(etag) => etag.to_string(),
+            None => String::default(),
+        }
     }
 }

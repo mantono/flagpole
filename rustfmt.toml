@@ -1,4 +1,4 @@
-edition = 2021
+edition = "2021"
 attr_fn_like_width=80
 brace_style="SameLineWhere"
 chain_width=80

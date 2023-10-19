@@ -19,6 +19,13 @@ pub struct Config {
     #[arg(short, long, env = "LOG_LEVEL", default_value = "Info")]
     log_level: log::Level,
 
+    /// Redis URI
+    ///
+    /// URI for the Redis server that feature flags will be persisted to
+    #[cfg(feature = "redis")]
+    #[arg(short, long, env = "REDIS_URI")]
+    redis_uri: String,
+
     /// API key
     ///
     /// Set an optional API key. If set, it must be present in any requests that alters state.
@@ -39,5 +46,10 @@ impl Config {
 
     pub fn api_key(&self) -> Option<String> {
         self.api_key.clone()
+    }
+
+    #[cfg(feature = "redis")]
+    pub fn redis_uri(&self) -> &str {
+        &self.redis_uri
     }
 }

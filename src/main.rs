@@ -64,7 +64,7 @@ async fn get_ns(path: Path<String>, state: State<AppState<impl Database>>) -> im
     let etag: String = db.etag(&namespace);
     let flags: HashSet<String> = db.get_values(&namespace).unwrap();
     let resp = Response { namespace, flags };
-    (StatusCode::OK, [(header::ETAG, format!("{etag}"))], Json(resp))
+    (StatusCode::OK, [(header::ETAG, etag)], Json(resp))
 }
 
 async fn head_ns(path: Path<String>, state: State<AppState<impl Database>>) -> impl IntoResponse {

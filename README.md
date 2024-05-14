@@ -17,6 +17,8 @@ Performance is important and desirable, but not as important as the above priori
 ## Building & Installing
 If you have [cargo](https://doc.rust-lang.org/cargo) installed, run `cargo install --path .` in the root of this repository.
 
+There is also a [Dockefile](Dockerfile) available, if you prefer to run this with Docker.
+
 ## Usage
 Launch the application simply by typing `flagpole` in a terminal.
 

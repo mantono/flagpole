@@ -15,6 +15,7 @@ log = { version = "0.4", optional = true }
 env_logger = { version = "0.11.8", optional = true }
 clap = { version = "4.5.46", features = ["color", "derive", "help", "usage", "std", "env"] }
 redis = { version = "0.25.4", features = [ "ahash", "aio", "tokio-comp" ] }
+sha2 = "0.10.9"
 
 [features]
 default = ["logging"]

@@ -24,6 +24,5 @@ COPY --from=builder /app/target/release/flagpole /usr/local/bin
 ENV HOST=0.0.0.0
 ENV PORT=3000
 ENV LOG_LEVEL=INFO
-ENV API_KEY=
 
 ENTRYPOINT ["/usr/local/bin/flagpole"]

@@ -8,7 +8,7 @@ pub mod mem;
 #[cfg(feature = "redis")]
 pub mod redis;
 
-pub async fn create_db(cfg: &Config) -> Arc<RwLock<impl Database>> {
+pub async fn create_db(cfg: &Config) -> Arc<RwLock<impl Database + use<>>> {
     #[cfg(not(feature = "redis"))]
     log::info!("Using InMemoryDb");
     #[cfg(not(feature = "redis"))]

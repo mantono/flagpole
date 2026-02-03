@@ -29,4 +29,5 @@ pub trait Database: Clone {
     fn get_values(&self, namespace: &str) -> Result<HashSet<String>, Self::Error>;
     fn etag(&self, namespace: &str) -> String;
     fn delete_flag(&mut self, namespace: &str, flag: String) -> Result<bool, Self::Error>;
+    fn health_check(&self) -> Result<(), Self::Error>;
 }

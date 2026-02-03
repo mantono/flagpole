@@ -74,4 +74,10 @@ impl Database for RedisDb {
 
         Ok(updated)
     }
+
+    fn health_check(&self) -> Result<(), Self::Error> {
+        let mut connection = self.get_conn()?;
+        let _: String = redis::cmd("PING").query(&mut connection)?;
+        Ok(())
+    }
 }

@@ -18,11 +18,21 @@ RUN cargo build --release --bin flagpole
 
 # We do not need the Rust toolchain to run the binary!
 FROM debian:bookworm-slim AS runtime
+
+# Create non-root user and group
+RUN groupadd -r flagpole && \
+    useradd -r -g flagpole -s /sbin/nologin flagpole
+
 WORKDIR /app
-COPY --from=builder /app/target/release/flagpole /usr/local/bin
+
+# Copy binary with appropriate ownership
+COPY --from=builder --chown=flagpole:flagpole /app/target/release/flagpole /usr/local/bin/flagpole
 
 ENV HOST=0.0.0.0
 ENV PORT=3000
 ENV LOG_LEVEL=INFO
+
+# Switch to non-root user
+USER flagpole
 
 ENTRYPOINT ["/usr/local/bin/flagpole"]

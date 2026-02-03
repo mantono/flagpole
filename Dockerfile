@@ -28,6 +28,11 @@ WORKDIR /app
 # Copy binary with appropriate ownership
 COPY --from=builder --chown=flagpole:flagpole /app/target/release/flagpole /usr/local/bin/flagpole
 
+# Add metadata labels
+LABEL org.opencontainers.image.source="https://github.com/mantono/flagpole"
+LABEL org.opencontainers.image.description="Flagpole - Feature flag service"
+LABEL org.opencontainers.image.vendor="mantono"
+
 ENV HOST=0.0.0.0
 ENV PORT=3000
 ENV LOG_LEVEL=INFO

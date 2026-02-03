@@ -37,6 +37,9 @@ ENV HOST=0.0.0.0
 ENV PORT=3000
 ENV LOG_LEVEL=INFO
 
+# Document the port the service uses
+EXPOSE 3000
+
 # Switch to non-root user
 USER flagpole
 

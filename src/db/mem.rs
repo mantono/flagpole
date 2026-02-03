@@ -3,7 +3,7 @@ use std::{
     convert::Infallible,
 };
 
-use crate::Database;
+use super::Database;
 
 #[derive(Clone)]
 pub struct InMemoryDb {
@@ -73,5 +73,9 @@ impl Database for InMemoryDb {
             Some(etag) => etag.to_string(),
             None => String::default(),
         }
+    }
+
+    fn health_check(&self) -> Result<(), Self::Error> {
+        Ok(())
     }
 }

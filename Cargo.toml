@@ -18,6 +18,9 @@ clap = { version = "4.5.53", features = ["color", "derive", "help", "usage", "st
 redis = { version = "0.25.4", features = [ "ahash", "aio", "tokio-comp" ] }
 sha2 = "0.10.9"
 
+[dev-dependencies]
+tower = "0.4"
+
 [features]
 default = ["logging"]
 logging = ["dep:log", "dep:env_logger"]

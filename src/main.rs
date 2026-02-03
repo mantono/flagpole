@@ -31,6 +31,7 @@ async fn main() {
         api_key: cfg.api_key(),
     };
     let router = Router::new()
+        .route("/health", get(health_check))
         .route("/api/flags/:namespace", get(get_ns).head(head_ns))
         .route("/api/flags/:namespace/:flag", put(put_flag).delete(delete_flag))
         .with_state(state);
@@ -104,6 +105,14 @@ async fn delete_flag(
         log::info!("Flag {flag} disabled in namespace {namespace}");
     }
     StatusCode::NO_CONTENT
+}
+
+async fn health_check(state: State<AppState<impl Database>>) -> StatusCode {
+    let db = state.0.db.read().unwrap();
+    match db.health_check() {
+        Ok(_) => StatusCode::OK,
+        Err(_) => StatusCode::SERVICE_UNAVAILABLE,
+    }
 }
 
 #[derive(serde::Serialize)]

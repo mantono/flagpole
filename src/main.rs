@@ -85,7 +85,7 @@ async fn put_flag(
     let updated: bool = state.0.db.write().unwrap().set_value(&namespace, flag.clone()).unwrap();
     if updated {
         #[cfg(feature = "logging")]
-        log::info!("Flag {flag} enabled in namespace {namespace}");
+        log::info!("Flag '{flag}' enabled in namespace <<{namespace}>>");
     }
     StatusCode::NO_CONTENT
 }

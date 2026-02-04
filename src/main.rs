@@ -38,7 +38,40 @@ async fn main() {
 
     let addr: SocketAddr = cfg.address().unwrap();
     log::info!("Running flagpole on {:?}", addr);
-    axum::Server::bind(&addr).serve(router.into_make_service()).await.unwrap();
+
+    axum::Server::bind(&addr)
+        .serve(router.into_make_service())
+        .with_graceful_shutdown(shutdown_signal())
+        .await
+        .unwrap();
+
+    log::info!("Server shutdown complete");
+}
+
+async fn shutdown_signal() {
+    let ctrl_c = async {
+        tokio::signal::ctrl_c().await.expect("failed to install CTRL+C signal handler");
+    };
+
+    #[cfg(unix)]
+    let terminate = async {
+        tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate())
+            .expect("failed to install SIGTERM signal handler")
+            .recv()
+            .await;
+    };
+
+    #[cfg(not(unix))]
+    let terminate = std::future::pending::<()>();
+
+    tokio::select! {
+        _ = ctrl_c => {
+            log::info!("Received SIGINT (CTRL+C), initiating graceful shutdown");
+        },
+        _ = terminate => {
+            log::info!("Received SIGTERM, initiating graceful shutdown");
+        },
+    }
 }
 
 #[derive(Clone)]

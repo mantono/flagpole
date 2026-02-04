@@ -21,6 +21,17 @@ async fn main() {
     env_logger::Builder::new()
         .target(env_logger::Target::Stdout)
         .filter_level(cfg.log_level().to_level_filter())
+        .format(|buf, record| {
+            use std::io::Write;
+            writeln!(
+                buf,
+                "{{\"timestamp\":\"{}\",\"level\":\"{}\",\"target\":\"{}\",\"message\":\"{}\"}}",
+                chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Millis, true),
+                record.level(),
+                record.target(),
+                record.args()
+            )
+        })
         .init();
 
     if cfg.api_key().is_none() {

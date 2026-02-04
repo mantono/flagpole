@@ -31,7 +31,7 @@ async fn main() {
         api_key: cfg.api_key(),
     };
     let router = Router::new()
-        .route("/health", get(health_check))
+        .route("/api/health", get(health_check))
         .route("/api/flags/:namespace", get(get_ns).head(head_ns))
         .route("/api/flags/:namespace/:flag", put(put_flag).delete(delete_flag))
         .with_state(state);

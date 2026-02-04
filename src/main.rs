@@ -10,8 +10,8 @@ use axum::response::IntoResponse;
 use cfg::Config;
 use clap::Parser;
 
-use axum::routing::{get, put};
 use axum::Router;
+use axum::routing::{get, put};
 use db::Database;
 
 #[tokio::main]
@@ -83,13 +83,13 @@ where
     api_key: Option<String>,
 }
 
-use crate::auth::{accept_auth, ApiKey};
+use crate::auth::{ApiKey, accept_auth};
 
-use axum::extract::{Path, State};
-use axum::headers::Authorization;
 use axum::Json;
 use axum::TypedHeader;
-use http::{header, StatusCode};
+use axum::extract::{Path, State};
+use axum::headers::Authorization;
+use http::{StatusCode, header};
 use std::collections::HashSet;
 
 async fn get_ns(path: Path<String>, state: State<AppState<impl Database>>) -> impl IntoResponse {

@@ -19,6 +19,7 @@ async fn main() {
     let cfg: Config = Config::parse();
     #[cfg(feature = "logging")]
     env_logger::Builder::new()
+        .target(env_logger::Target::Stdout)
         .filter_level(cfg.log_level().to_level_filter())
         .init();
 

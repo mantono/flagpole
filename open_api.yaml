@@ -80,6 +80,16 @@ paths:
         '401':
           description: Unauthorized
 
+  /api/health:
+    get:
+      summary: Health check endpoint
+      description: Check the health status of the service and its database connection (if any)
+      responses:
+        '200':
+          description: Service is healthy
+        '503':
+          description: Service is unavailable
+
 components:
   schemas:
     Response:

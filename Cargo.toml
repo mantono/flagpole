@@ -14,6 +14,7 @@ tokio = { version = "1", features = ["full"] }
 axum = { version = "0.6.18", features = ["headers", "http1", "json", "tokio", "query"] }
 log = { version = "0.4", optional = true }
 env_logger = { version = "0.11.8", optional = true }
+chrono = { version = "0.4", optional = true }
 clap = { version = "4.5.53", features = ["color", "derive", "help", "usage", "std", "env"] }
 redis = { version = "0.25.4", features = [ "ahash", "aio", "tokio-comp" ] }
 sha2 = "0.10.9"
@@ -24,4 +25,5 @@ tower = "0.4"
 [features]
 default = ["logging"]
 logging = ["dep:log", "dep:env_logger"]
+json-logging = ["dep:chrono", "logging"]
 redis = []

@@ -18,11 +18,10 @@ use db::Database;
 async fn main() {
     let cfg: Config = Config::parse();
     #[cfg(feature = "logging")]
-    env_logger::Builder::new()
-        .filter_level(cfg.log_level().to_level_filter())
-        .init();
+    init_logs(&cfg);
 
     if cfg.api_key().is_none() {
+        #[cfg(feature = "logging")]
         log::warn!("No API key is configured, authentication is disabled");
     }
 
@@ -37,6 +36,7 @@ async fn main() {
         .with_state(state);
 
     let addr: SocketAddr = cfg.address().unwrap();
+    #[cfg(feature = "logging")]
     log::info!("Running flagpole on {:?}", addr);
 
     axum::Server::bind(&addr)
@@ -45,7 +45,35 @@ async fn main() {
         .await
         .unwrap();
 
+    #[cfg(feature = "logging")]
     log::info!("Server shutdown complete");
+}
+
+#[cfg(feature = "logging")]
+#[cfg(not(feature = "json-logging"))]
+fn init_logs(cfg: &Config) {
+    env_logger::Builder::new()
+        .filter_level(cfg.log_level().to_level_filter())
+        .init();
+}
+
+#[cfg(feature = "json-logging")]
+fn init_logs(cfg: &Config) {
+    env_logger::Builder::new()
+        .target(env_logger::Target::Stdout)
+        .filter_level(cfg.log_level().to_level_filter())
+        .format(|buf, record| {
+            use std::io::Write;
+            writeln!(
+                buf,
+                "{{\"timestamp\":\"{}\",\"level\":\"{}\",\"target\":\"{}\",\"message\":\"{}\"}}",
+                chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Millis, true),
+                record.level(),
+                record.target(),
+                record.args()
+            )
+        })
+        .init();
 }
 
 async fn shutdown_signal() {
@@ -66,9 +94,11 @@ async fn shutdown_signal() {
 
     tokio::select! {
         _ = ctrl_c => {
+    #[cfg(feature = "logging")]
             log::info!("Received SIGINT (CTRL+C), initiating graceful shutdown");
         },
         _ = terminate => {
+    #[cfg(feature = "logging")]
             log::info!("Received SIGTERM, initiating graceful shutdown");
         },
     }

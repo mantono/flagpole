@@ -14,7 +14,8 @@ COPY --from=planner /app/recipe.json recipe.json
 RUN cargo chef cook --release --recipe-path recipe.json
 # Build application
 COPY . .
-RUN cargo build --release --bin flagpole
+ARG FEATURES=logging
+RUN cargo build --release --bin flagpole --features=$FEATURES
 
 # We do not need the Rust toolchain to run the binary!
 FROM debian:stable-slim@sha256:4448d44b91bf4a13cb1b4e02d9d5f87ed40621d6e33f0ae7b6ddf71d57e29364 AS runtime

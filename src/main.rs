@@ -18,6 +18,47 @@ use db::Database;
 async fn main() {
     let cfg: Config = Config::parse();
     #[cfg(feature = "logging")]
+    init_logs(&cfg);
+
+    if cfg.api_key().is_none() {
+        #[cfg(feature = "logging")]
+        log::warn!("No API key is configured, authentication is disabled");
+    }
+
+    let state = AppState {
+        db: db::create_db(&cfg).await,
+        api_key: cfg.api_key(),
+    };
+    let router = Router::new()
+        .route("/api/health", get(health_check))
+        .route("/api/flags/:namespace", get(get_ns).head(head_ns))
+        .route("/api/flags/:namespace/:flag", put(put_flag).delete(delete_flag))
+        .with_state(state);
+
+    let addr: SocketAddr = cfg.address().unwrap();
+    #[cfg(feature = "logging")]
+    log::info!("Running flagpole on {:?}", addr);
+
+    axum::Server::bind(&addr)
+        .serve(router.into_make_service())
+        .with_graceful_shutdown(shutdown_signal())
+        .await
+        .unwrap();
+
+    #[cfg(feature = "logging")]
+    log::info!("Server shutdown complete");
+}
+
+#[cfg(feature = "logging")]
+#[cfg(not(feature = "json-logging"))]
+fn init_logs(cfg: &Config) {
+    env_logger::Builder::new()
+        .filter_level(cfg.log_level().to_level_filter())
+        .init();
+}
+
+#[cfg(feature = "json-logging")]
+fn init_logs(cfg: &Config) {
     env_logger::Builder::new()
         .target(env_logger::Target::Stdout)
         .filter_level(cfg.log_level().to_level_filter())
@@ -33,31 +74,6 @@ async fn main() {
             )
         })
         .init();
-
-    if cfg.api_key().is_none() {
-        log::warn!("No API key is configured, authentication is disabled");
-    }
-
-    let state = AppState {
-        db: db::create_db(&cfg).await,
-        api_key: cfg.api_key(),
-    };
-    let router = Router::new()
-        .route("/api/health", get(health_check))
-        .route("/api/flags/:namespace", get(get_ns).head(head_ns))
-        .route("/api/flags/:namespace/:flag", put(put_flag).delete(delete_flag))
-        .with_state(state);
-
-    let addr: SocketAddr = cfg.address().unwrap();
-    log::info!("Running flagpole on {:?}", addr);
-
-    axum::Server::bind(&addr)
-        .serve(router.into_make_service())
-        .with_graceful_shutdown(shutdown_signal())
-        .await
-        .unwrap();
-
-    log::info!("Server shutdown complete");
 }
 
 async fn shutdown_signal() {
@@ -78,9 +94,11 @@ async fn shutdown_signal() {
 
     tokio::select! {
         _ = ctrl_c => {
+    #[cfg(feature = "logging")]
             log::info!("Received SIGINT (CTRL+C), initiating graceful shutdown");
         },
         _ = terminate => {
+    #[cfg(feature = "logging")]
             log::info!("Received SIGTERM, initiating graceful shutdown");
         },
     }

@@ -24,5 +24,6 @@ tower = "0.4"
 
 [features]
 default = ["logging"]
-logging = ["dep:log", "dep:env_logger", "dep:chrono"]
+logging = ["dep:log", "dep:env_logger"]
+json-logging = ["dep:chrono", "logging"]
 redis = []

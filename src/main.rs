@@ -21,7 +21,6 @@ async fn main() {
     init_logs(&cfg);
 
     if cfg.api_key().is_none() {
-        #[cfg(feature = "logging")]
         log::warn!("No API key is configured, authentication is disabled");
     }
 
@@ -36,7 +35,6 @@ async fn main() {
         .with_state(state);
 
     let addr: SocketAddr = cfg.address().unwrap();
-    #[cfg(feature = "logging")]
     log::info!("Running flagpole on {:?}", addr);
 
     axum::Server::bind(&addr)
@@ -45,7 +43,6 @@ async fn main() {
         .await
         .unwrap();
 
-    #[cfg(feature = "logging")]
     log::info!("Server shutdown complete");
 }
 
@@ -94,11 +91,9 @@ async fn shutdown_signal() {
 
     tokio::select! {
         _ = ctrl_c => {
-    #[cfg(feature = "logging")]
             log::info!("Received SIGINT (CTRL+C), initiating graceful shutdown");
         },
         _ = terminate => {
-    #[cfg(feature = "logging")]
             log::info!("Received SIGTERM, initiating graceful shutdown");
         },
     }
@@ -148,7 +143,6 @@ async fn put_flag(
     }
     let updated: bool = state.0.db.write().unwrap().set_value(&namespace, flag.clone()).unwrap();
     if updated {
-        #[cfg(feature = "logging")]
         log::info!("Flag '{flag}' enabled in namespace <<{namespace}>>");
     }
     StatusCode::NO_CONTENT
@@ -164,7 +158,6 @@ async fn delete_flag(
     }
     let updated: bool = state.0.db.write().unwrap().delete_flag(&namespace, flag.clone()).unwrap();
     if updated {
-        #[cfg(feature = "logging")]
         log::info!("Flag {flag} disabled in namespace {namespace}");
     }
     StatusCode::NO_CONTENT

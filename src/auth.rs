@@ -1,6 +1,6 @@
 use std::{hint::black_box, io::Read};
 
-use axum::{headers::Authorization, TypedHeader};
+use axum::{TypedHeader, headers::Authorization};
 use http::HeaderValue;
 use sha2::Digest;
 

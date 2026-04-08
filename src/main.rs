@@ -133,6 +133,8 @@ async fn head_ns(path: Path<String>, state: State<AppState<impl Database>>) -> i
     (StatusCode::OK, [(header::ETAG, etag)])
 }
 
+const MAX_NAME_LENGTH: usize = 256;
+
 async fn put_flag(
     Path((namespace, flag)): Path<(String, String)>,
     auth: Option<TypedHeader<Authorization<ApiKey>>>,
@@ -140,6 +142,9 @@ async fn put_flag(
 ) -> StatusCode {
     if !accept_auth(&state.api_key, auth) {
         return StatusCode::UNAUTHORIZED;
+    }
+    if namespace.len() > MAX_NAME_LENGTH || flag.len() > MAX_NAME_LENGTH {
+        return StatusCode::BAD_REQUEST;
     }
     let updated: bool = state.0.db.write().unwrap().set_value(&namespace, flag.clone()).unwrap();
     if updated {
@@ -155,6 +160,9 @@ async fn delete_flag(
 ) -> StatusCode {
     if !accept_auth(&state.api_key, auth) {
         return StatusCode::UNAUTHORIZED;
+    }
+    if namespace.len() > MAX_NAME_LENGTH || flag.len() > MAX_NAME_LENGTH {
+        return StatusCode::BAD_REQUEST;
     }
     let updated: bool = state.0.db.write().unwrap().delete_flag(&namespace, flag.clone()).unwrap();
     if updated {

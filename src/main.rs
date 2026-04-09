@@ -117,20 +117,32 @@ use axum::headers::Authorization;
 use http::{StatusCode, header};
 use std::collections::HashSet;
 
-async fn get_ns(path: Path<String>, state: State<AppState<impl Database>>) -> impl IntoResponse {
+async fn get_ns(
+    path: Path<String>,
+    state: State<AppState<impl Database>>,
+) -> Result<impl IntoResponse, StatusCode> {
     let namespace: String = path.0;
-    let db = state.0.db.read().unwrap();
+    let db = state.0.db.read().map_err(|_| {
+        log::error!("Database lock poisoned");
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
     let etag: String = db.etag(&namespace);
     let flags: HashSet<String> = db.get_values(&namespace).unwrap();
     let resp = Response { namespace, flags };
-    (StatusCode::OK, [(header::ETAG, etag)], Json(resp))
+    Ok((StatusCode::OK, [(header::ETAG, etag)], Json(resp)))
 }
 
-async fn head_ns(path: Path<String>, state: State<AppState<impl Database>>) -> impl IntoResponse {
+async fn head_ns(
+    path: Path<String>,
+    state: State<AppState<impl Database>>,
+) -> Result<impl IntoResponse, StatusCode> {
     let namespace: String = path.0;
-    let db = state.0.db.read().unwrap();
+    let db = state.0.db.read().map_err(|_| {
+        log::error!("Database lock poisoned");
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
     let etag: String = db.etag(&namespace);
-    (StatusCode::OK, [(header::ETAG, etag)])
+    Ok((StatusCode::OK, [(header::ETAG, etag)]))
 }
 
 async fn put_flag(
@@ -141,7 +153,14 @@ async fn put_flag(
     if !accept_auth(&state.api_key, auth) {
         return StatusCode::UNAUTHORIZED;
     }
-    let updated: bool = state.0.db.write().unwrap().set_value(&namespace, flag.clone()).unwrap();
+    let mut db = match state.0.db.write() {
+        Ok(db) => db,
+        Err(_) => {
+            log::error!("Database lock poisoned");
+            return StatusCode::INTERNAL_SERVER_ERROR;
+        }
+    };
+    let updated: bool = db.set_value(&namespace, flag.clone()).unwrap();
     if updated {
         log::info!("Flag '{flag}' enabled in namespace <<{namespace}>>");
     }
@@ -156,7 +175,14 @@ async fn delete_flag(
     if !accept_auth(&state.api_key, auth) {
         return StatusCode::UNAUTHORIZED;
     }
-    let updated: bool = state.0.db.write().unwrap().delete_flag(&namespace, flag.clone()).unwrap();
+    let mut db = match state.0.db.write() {
+        Ok(db) => db,
+        Err(_) => {
+            log::error!("Database lock poisoned");
+            return StatusCode::INTERNAL_SERVER_ERROR;
+        }
+    };
+    let updated: bool = db.delete_flag(&namespace, flag.clone()).unwrap();
     if updated {
         log::info!("Flag {flag} disabled in namespace {namespace}");
     }
@@ -164,7 +190,13 @@ async fn delete_flag(
 }
 
 async fn health_check(state: State<AppState<impl Database>>) -> StatusCode {
-    let db = state.0.db.read().unwrap();
+    let db = match state.0.db.read() {
+        Ok(db) => db,
+        Err(_) => {
+            log::error!("Database lock poisoned");
+            return StatusCode::INTERNAL_SERVER_ERROR;
+        }
+    };
     match db.health_check() {
         Ok(_) => StatusCode::OK,
         Err(_) => StatusCode::SERVICE_UNAVAILABLE,

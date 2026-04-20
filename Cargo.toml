@@ -20,7 +20,7 @@ redis = { version = "0.25.4", features = [ "ahash", "aio", "tokio-comp" ] }
 sha2 = "0.10.9"
 
 [dev-dependencies]
-tower = "0.4"
+tower = "0.5"
 
 [features]
 default = ["logging"]

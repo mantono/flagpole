@@ -61,14 +61,13 @@ fn init_logs(cfg: &Config) {
         .filter_level(cfg.log_level().to_level_filter())
         .format(|buf, record| {
             use std::io::Write;
-            writeln!(
-                buf,
-                "{{\"timestamp\":\"{}\",\"level\":\"{}\",\"target\":\"{}\",\"message\":\"{}\"}}",
-                chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Millis, true),
-                record.level(),
-                record.target(),
-                record.args()
-            )
+            let log_entry = serde_json::json!({
+                "timestamp": chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Millis, true),
+                "level": record.level().to_string(),
+                "target": record.target(),
+                "message": record.args().to_string(),
+            });
+            writeln!(buf, "{}", log_entry)
         })
         .init();
 }

@@ -16,7 +16,7 @@ log = "0.4"
 env_logger = { version = "0.11.8", optional = true }
 chrono = { version = "0.4", optional = true }
 clap = { version = "4.5.53", features = ["color", "derive", "help", "usage", "std", "env"] }
-redis = { version = "0.25.4", features = [ "ahash", "aio", "tokio-comp" ] }
+redis = { version = "0.25.4", features = [ "ahash", "aio", "tokio-comp" ], optional = true }
 sha2 = "0.10.9"
 
 [dev-dependencies]
@@ -26,4 +26,4 @@ tower = "0.4"
 default = ["logging"]
 logging = ["dep:env_logger"]
 json-logging = ["dep:chrono", "logging"]
-redis = []
+redis = ["dep:redis"]
